@@ -15,6 +15,8 @@ spec:
     spec:
       serviceAccountName: agentic-dispatch-t3
       automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 10001
       containers:
         - name: t3
           image: ghcr.io/kevin/t3-code-server:packaged-placeholder

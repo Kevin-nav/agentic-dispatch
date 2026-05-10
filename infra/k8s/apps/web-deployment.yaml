@@ -22,6 +22,10 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+              readOnly: false
           resources:
             requests:
               cpu: 50m
@@ -37,3 +41,7 @@ spec:
             capabilities:
               drop:
                 - ALL
+      volumes:
+        - name: tmp-volume
+          emptyDir:
+            medium: Memory
