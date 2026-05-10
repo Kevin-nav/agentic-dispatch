@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: t3-code-server
+  namespace: agentic-dispatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: t3-code-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: t3-code-server
+    spec:
+      serviceAccountName: agentic-dispatch-t3
+      automountServiceAccountToken: false
+      containers:
+        - name: t3
+          image: ghcr.io/kevin/t3-code-server:packaged-placeholder
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3773
+          envFrom:
+            - secretRef:
+                name: agentic-dispatch-t3-env
+          env:
+            - name: T3CODE_HOME
+              value: /var/lib/t3code
+          volumeMounts:
+            - name: t3-data
+              mountPath: /var/lib/t3code
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: t3-data
+          persistentVolumeClaim:
+            claimName: t3-code-server-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: t3-code-server-data
+  namespace: agentic-dispatch
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
