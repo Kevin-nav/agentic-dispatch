@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.convex/
+dist/
+build/
+.turbo/
+.next/
+coverage/
+*.log
+tmp/
+.DS_Store
