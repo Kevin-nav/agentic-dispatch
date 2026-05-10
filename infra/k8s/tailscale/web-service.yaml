@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentic-dispatch-web-ts
+  namespace: agentic-dispatch
+  annotations:
+    tailscale.com/expose: "true"
+    tailscale.com/tags: "tag:agentic-dispatch-web"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: agentic-dispatch-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
