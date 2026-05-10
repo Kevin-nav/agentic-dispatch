@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm -r --parallel dev",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
@@ -14,5 +16,8 @@
     "typescript": "^5.7.0",
     "vitest": "^4.0.0"
   },
-  "packageManager": "pnpm@10.0.0"
+  "packageManager": "pnpm@10.0.0",
+  "dependencies": {
+    "convex": "^1.38.0"
+  }
 }
