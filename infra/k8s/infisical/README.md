@@ -36,4 +36,4 @@ The operator creates these Kubernetes secrets:
 - `agentic-dispatch-t3-env`
 - `agentic-dispatch-cloudflare-tunnel`
 
-`T3_OWNER_BEARER_TOKEN` may stay empty until the T3 service is deployed and paired. Fill it in Infisical Production before running autonomous jobs.
+`T3_OWNER_BEARER_TOKEN` may stay empty until the T3 service is deployed and paired. It is intentionally not required by the initial sync manifest. Add it to the synced API/T3 secrets before running autonomous jobs.
