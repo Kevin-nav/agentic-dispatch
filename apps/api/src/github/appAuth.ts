@@ -43,6 +43,13 @@ export function makeGitHubAppAuth(config: GitHubAppAuthConfig = {}): GitHubAppAu
   return createAppAuth(readGitHubAppConfig(config));
 }
 
+export function makeGitHubAppOctokit(config: GitHubAppAuthConfig = {}): Octokit {
+  return new Octokit({
+    authStrategy: createAppAuth,
+    auth: readGitHubAppConfig(config),
+  });
+}
+
 export async function getInstallationToken(
   installationId: number,
   auth: GitHubAppAuth = makeGitHubAppAuth(),

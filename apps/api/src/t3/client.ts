@@ -1,6 +1,7 @@
 import {
   buildProjectCreateCommand,
   buildThreadCreateCommand,
+  buildTurnInterruptCommand,
   buildTurnStartCommand,
   type ProjectCreateInput,
   type T3DispatchCommand,
@@ -56,6 +57,15 @@ export async function createThread(
 
 export async function startTurn(config: T3ClientConfig, input: TurnStartInput) {
   const command = buildTurnStartCommand(input);
+  await dispatchCommand(config, command);
+  return command;
+}
+
+export async function interruptTurn(
+  config: T3ClientConfig,
+  input: { threadId: string; commandId?: string },
+) {
+  const command = buildTurnInterruptCommand(input);
   await dispatchCommand(config, command);
   return command;
 }
