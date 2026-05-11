@@ -80,10 +80,18 @@ export interface TurnStartCommand {
   createdAt: string;
 }
 
+export interface TurnInterruptCommand {
+  type: "thread.turn.interrupt";
+  commandId: string;
+  threadId: string;
+  createdAt: string;
+}
+
 export type T3DispatchCommand =
   | ProjectCreateCommand
   | ThreadCreateCommand
-  | TurnStartCommand;
+  | TurnStartCommand
+  | TurnInterruptCommand;
 
 export function buildProjectCreateCommand(
   input: ProjectCreateInput,
@@ -132,6 +140,19 @@ export function buildTurnStartCommand(input: TurnStartInput): TurnStartCommand {
     titleSeed: input.titleSeed,
     runtimeMode: DEFAULT_T3_RUNTIME_MODE,
     interactionMode: DEFAULT_T3_INTERACTION_MODE,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  };
+}
+
+export function buildTurnInterruptCommand(input: {
+  threadId: string;
+  commandId?: string;
+  createdAt?: string;
+}): TurnInterruptCommand {
+  return {
+    type: "thread.turn.interrupt",
+    commandId: input.commandId ?? crypto.randomUUID(),
+    threadId: input.threadId,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
 }
