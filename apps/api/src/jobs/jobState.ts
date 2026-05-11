@@ -35,6 +35,7 @@ export interface JobStore {
   createJob(input: CreateStoredJobInput): Promise<JobRecord>;
   getJob(jobId: string): Promise<JobRecord | undefined>;
   listJobs?(): Promise<JobRecord[]>;
+  listJobEvents?(jobId: string): Promise<JobEventRecord[]>;
   updateJobStatus(jobId: string, status: JobStatus, message?: string): Promise<void>;
   attachT3Thread(jobId: string, t3ProjectId: string, t3ThreadId: string): Promise<void>;
   attachPullRequest(jobId: string, prUrl: string): Promise<void>;
@@ -45,6 +46,7 @@ export interface JobStore {
   ): Promise<void>;
   cancelJob(jobId: string, reason?: string): Promise<void>;
   getInstallationByOwner(ownerLogin: string): Promise<InstallationRecord | undefined>;
+  listInstallations?(): Promise<InstallationRecord[]>;
   upsertInstallation?(installation: InstallationRecord): Promise<void>;
 }
 
@@ -114,6 +116,10 @@ export class InMemoryJobStore implements JobStore {
     return [...this.jobs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
+  async listJobEvents(jobId: string): Promise<JobEventRecord[]> {
+    return this.getJobEvents(jobId);
+  }
+
   async updateJobStatus(jobId: string, status: JobStatus, message?: string): Promise<void> {
     const job = this.requireJob(jobId);
     assertJobStatusTransition(job.status, status);
@@ -159,6 +165,12 @@ export class InMemoryJobStore implements JobStore {
 
   async getInstallationByOwner(ownerLogin: string): Promise<InstallationRecord | undefined> {
     return this.installations.get(normalizeOwner(ownerLogin));
+  }
+
+  async listInstallations(): Promise<InstallationRecord[]> {
+    return [...this.installations.values()].sort((a, b) =>
+      a.ownerLogin.localeCompare(b.ownerLogin),
+    );
   }
 
   async upsertInstallation(installation: InstallationRecord): Promise<void> {

@@ -12,7 +12,8 @@
   "dependencies": {
     "@agentic-dispatch/shared": "workspace:*",
     "@octokit/auth-app": "^8.2.0",
-    "@octokit/rest": "^22.0.1"
+    "@octokit/rest": "^22.0.1",
+    "convex": "^1.38.0"
   },
   "devDependencies": {
     "tsx": "^4.20.0"

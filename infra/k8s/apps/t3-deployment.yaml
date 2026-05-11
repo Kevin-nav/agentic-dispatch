@@ -19,8 +19,8 @@ spec:
         fsGroup: 10001
       containers:
         - name: t3
-          image: ghcr.io/kevin/t3-code-server:packaged-placeholder
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/kevin-nav/t3-code-server:replace-before-task-9
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 3773

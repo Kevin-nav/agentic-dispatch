@@ -1,8 +1,14 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 import type { AppEnv } from "../config/env.js";
-import { getInstallationToken, makeGitHubAppOctokit } from "../github/appAuth.js";
+import { ConvexJobStore } from "../convex/jobStore.js";
+import {
+  getInstallationToken,
+  makeGitHubAppOctokit,
+  makeInstallationOctokit,
+} from "../github/appAuth.js";
 import { listInstallations as listGitHubInstallations } from "../github/installations.js";
+import { listInstallationRepos, type InstallationRepo } from "../github/repos.js";
 import { createJob, type CreateJobRequest } from "../jobs/createJob.js";
 import { cancelJob } from "../jobs/cancelJob.js";
 import { ActiveJobRegistry, InMemoryJobStore, type JobStore } from "../jobs/jobState.js";
@@ -21,6 +27,7 @@ export interface ServerDependencies {
   store: JobStore;
   github: GitHubJobClient & {
     syncInstallations?: (store: JobStore) => Promise<unknown>;
+    listRepos?: (store: JobStore) => Promise<InstallationRepo[]>;
   };
   workspaceManager: WorkspaceManager;
   t3: T3JobClient;
@@ -28,7 +35,7 @@ export interface ServerDependencies {
 }
 
 export function buildDefaultDependencies(env: AppEnv): ServerDependencies {
-  const store = new InMemoryJobStore();
+  const store = env.convexUrl ? new ConvexJobStore(env.convexUrl) : new InMemoryJobStore();
   const activeJobs = new ActiveJobRegistry();
   const t3Config: T3ClientConfig = {
     baseUrl: env.t3BaseUrl,
@@ -43,6 +50,17 @@ export function buildDefaultDependencies(env: AppEnv): ServerDependencies {
         await targetStore.upsertInstallation?.(installation);
       }
       return installations;
+    },
+    listRepos: async (targetStore) => {
+      const installations = (await targetStore.listInstallations?.()) ?? [];
+      const repos: InstallationRepo[] = [];
+
+      for (const installation of installations) {
+        const octokit = await makeInstallationOctokit(installation.installationId);
+        repos.push(...(await listInstallationRepos(octokit)));
+      }
+
+      return repos.sort((a, b) => a.fullName.localeCompare(b.fullName));
     },
   };
 
@@ -86,7 +104,21 @@ async function routeRequest(
   const url = new URL(request.url ?? "/", "http://agentic-dispatch.local");
 
   if (request.method === "GET" && url.pathname === "/api/health") {
-    writeJson(response, 200, { status: "healthy" });
+    const jobs = (await deps.store.listJobs?.()) ?? [];
+    const activeJobs = jobs.filter(
+      (job) => !["completed", "failed", "cancelled", "timed_out"].includes(job.status),
+    ).length;
+
+    writeJson(response, 200, {
+      api: "ok",
+      convex: env.convexUrl ? "ok" : "degraded",
+      t3: env.t3OwnerBearerToken ? "ok" : "degraded",
+      github:
+        process.env.GITHUB_APP_ID && process.env.GITHUB_APP_PRIVATE_KEY ? "ok" : "degraded",
+      activeJobs,
+      totalJobs: jobs.length,
+      lastCheck: new Date().toISOString(),
+    });
     return;
   }
 
@@ -120,10 +152,39 @@ async function routeRequest(
     return;
   }
 
+  const eventsMatch = url.pathname.match(/^\/api\/jobs\/([^/]+)\/events$/);
+  if (request.method === "GET" && eventsMatch?.[1]) {
+    const jobId = decodeURIComponent(eventsMatch[1]);
+    const job = await deps.store.getJob(jobId);
+    if (!job) {
+      writeJson(response, 404, { error: "Job not found" });
+      return;
+    }
+    writeJson(response, 200, { events: (await deps.store.listJobEvents?.(jobId)) ?? [] });
+    return;
+  }
+
   const cancelMatch = url.pathname.match(/^\/api\/jobs\/([^/]+)\/cancel$/);
   if (request.method === "POST" && cancelMatch?.[1]) {
     const job = await cancelJob(decodeURIComponent(cancelMatch[1]), deps);
     writeJson(response, 200, { job });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/github/installations") {
+    writeJson(response, 200, {
+      installations: (await deps.store.listInstallations?.()) ?? [],
+    });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/github/repos") {
+    if (!deps.github.listRepos) {
+      writeJson(response, 501, { error: "GitHub repo listing is not configured" });
+      return;
+    }
+
+    writeJson(response, 200, { repos: await deps.github.listRepos(deps.store) });
     return;
   }
 

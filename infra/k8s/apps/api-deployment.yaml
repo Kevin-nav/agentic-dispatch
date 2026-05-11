@@ -20,14 +20,17 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: ghcr.io/kevin/agentic-dispatch-api:placeholder
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/kevin-nav/agentic-dispatch-api:latest
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 3000
           envFrom:
             - secretRef:
                 name: agentic-dispatch-api-env
+          env:
+            - name: PORT
+              value: "3000"
           resources:
             requests:
               cpu: 100m

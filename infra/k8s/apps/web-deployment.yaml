@@ -17,8 +17,8 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: web
-          image: ghcr.io/kevin/agentic-dispatch-web:placeholder
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/kevin-nav/agentic-dispatch-web:latest
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080

@@ -1,5 +1,6 @@
 export interface AppEnv {
   infisicalEnv: string;
+  convexUrl?: string;
   port: number;
   t3BaseUrl: string;
   t3OwnerBearerToken: string;
@@ -11,6 +12,7 @@ export interface AppEnv {
 export function loadEnv(): AppEnv {
   return {
     infisicalEnv: process.env.INFISICAL_ENV ?? "prod",
+    convexUrl: process.env.CONVEX_URL,
     port: parseIntegerEnv("PORT", 3001),
     t3BaseUrl:
       process.env.T3_BASE_URL ??
