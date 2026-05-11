@@ -15,6 +15,9 @@ spec:
     spec:
       serviceAccountName: agentic-dispatch-web
       automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: web
           image: ghcr.io/kevin-nav/agentic-dispatch-web:latest
