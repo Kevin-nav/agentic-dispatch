@@ -82,7 +82,8 @@ if (!installationToken.token || !installationToken.expiresAt) {
 const installationOctokit = await makeInstallationOctokit(installation.installationId, appAuth);
 const repos = await listInstallationRepos(installationOctokit);
 const repoVisible = repos.some(
-  (candidate) => candidate.owner.toLowerCase() === owner.toLowerCase() && candidate.repo === repo,
+  (candidate) =>
+    candidate.owner.toLowerCase() === owner.toLowerCase() && candidate.repo.toLowerCase() === repo.toLowerCase(),
 );
 
 if (!repoVisible) {

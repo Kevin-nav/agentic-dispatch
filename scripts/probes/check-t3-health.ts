@@ -3,7 +3,12 @@ import { readFile } from "node:fs/promises";
 import { dispatchCommand, getSnapshot } from "../../apps/api/src/t3/client.js";
 import type { T3DispatchCommand } from "../../apps/api/src/t3/commands.js";
 
-const baseUrl = process.env.T3_BASE_URL ?? "http://127.0.0.1:3773";
+const configuredBaseUrl = process.env.T3_BASE_URL;
+if (!configuredBaseUrl && process.env.NODE_ENV === "production") {
+  throw new Error("T3_BASE_URL is required when NODE_ENV=production");
+}
+
+const baseUrl = configuredBaseUrl ?? "http://127.0.0.1:3773";
 const ownerBearerToken = process.env.T3_OWNER_BEARER_TOKEN;
 const dryRunEnabled = process.env.AGENTIC_DISPATCH_T3_DISPATCH_DRY_RUN === "true";
 const dryRunCommandPath = process.env.AGENTIC_DISPATCH_T3_DRY_RUN_COMMAND_JSON;
