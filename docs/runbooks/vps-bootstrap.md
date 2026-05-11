@@ -54,6 +54,7 @@ kubectl apply -f infra/k8s/base/pod-security.yaml
 kubectl apply -f infra/k8s/base/networkpolicies/default-deny.yaml
 kubectl apply -f infra/k8s/base/networkpolicies/allow-dns.yaml
 kubectl apply -f infra/k8s/base/networkpolicies/allow-control-plane-internal.yaml
+kubectl apply -f infra/k8s/base/networkpolicies/allow-public-egress.yaml
 ```
 
 The API service account intentionally has no broad RBAC. Add narrow Job/Pod permissions later only if the orchestrator needs them.
@@ -108,6 +109,7 @@ kubectl apply -f infra/k8s/apps/t3-deployment.yaml
 kubectl apply -f infra/k8s/apps/api-deployment.yaml
 kubectl apply -f infra/k8s/apps/api-service.yaml
 kubectl apply -f infra/k8s/apps/web-deployment.yaml
+kubectl apply -f infra/k8s/apps/web-service.yaml
 kubectl apply -f infra/k8s/base/networkpolicies/allow-cloudflare-tunnel.yaml
 kubectl apply -f infra/k8s/cloudflare/cloudflared-deployment.yaml
 kubectl apply -f infra/k8s/base/networkpolicies/allow-tailscale-ingress.yaml

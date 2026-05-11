@@ -48,11 +48,13 @@ jobs:
           kubectl apply -f infra/k8s/base/networkpolicies/default-deny.yaml
           kubectl apply -f infra/k8s/base/networkpolicies/allow-dns.yaml
           kubectl apply -f infra/k8s/base/networkpolicies/allow-control-plane-internal.yaml
+          kubectl apply -f infra/k8s/base/networkpolicies/allow-public-egress.yaml
           kubectl apply -f infra/k8s/base/networkpolicies/allow-cloudflare-tunnel.yaml
           kubectl apply -f infra/k8s/infisical/serviceaccount.yaml
           kubectl apply -f infra/k8s/infisical/infisical-secrets.yaml
           kubectl apply -f infra/k8s/apps/api-deployment.yaml
           kubectl apply -f infra/k8s/apps/api-service.yaml
           kubectl apply -f infra/k8s/apps/web-deployment.yaml
+          kubectl apply -f infra/k8s/apps/web-service.yaml
           kubectl apply -f infra/k8s/cloudflare/cloudflared-deployment.yaml
           EOF
