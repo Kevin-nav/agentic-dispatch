@@ -1,0 +1,79 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web-to-api
+  namespace: agentic-dispatch
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agentic-dispatch-web
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentic-dispatch-api
+      ports:
+        - protocol: TCP
+          port: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-from-web
+  namespace: agentic-dispatch
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agentic-dispatch-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentic-dispatch-web
+      ports:
+        - protocol: TCP
+          port: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-to-t3
+  namespace: agentic-dispatch
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agentic-dispatch-api
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: t3-code-server
+      ports:
+        - protocol: TCP
+          port: 3773
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-t3-from-api
+  namespace: agentic-dispatch
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: t3-code-server
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentic-dispatch-api
+      ports:
+        - protocol: TCP
+          port: 3773

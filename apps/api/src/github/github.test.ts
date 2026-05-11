@@ -7,6 +7,7 @@ import {
 } from "./appAuth.js";
 import { createBranch, getPushBranchInstructions } from "./branches.js";
 import { listInstallations, syncInstallations } from "./installations.js";
+import { createPullRequest, findPullRequestByBranch } from "./pullRequests.js";
 
 describe("GitHub shared helpers", () => {
   it("parses repository full names", () => {
@@ -132,8 +133,64 @@ describe("GitHub branch helpers", () => {
     expect(getPushBranchInstructions()).toContain("git push origin HEAD:<work-branch>");
     expect(githubAppRequiredPermissions).toEqual({
       contents: "write",
-      pullRequests: "write",
+      pull_requests: "write",
       workflows: "write",
+    });
+  });
+});
+
+describe("GitHub pull request helpers", () => {
+  it("omits optional list filters when they are not provided", async () => {
+    const octokit = {
+      pulls: {
+        list: vi.fn().mockResolvedValue({ data: [] }),
+      },
+    };
+
+    await findPullRequestByBranch(octokit as never, {
+      owner: "octo",
+      repo: "example",
+      head: "octo:agentic-dispatch/job-1",
+    });
+
+    expect(octokit.pulls.list).toHaveBeenCalledWith({
+      owner: "octo",
+      repo: "example",
+      head: "octo:agentic-dispatch/job-1",
+      state: "open",
+      per_page: 10,
+    });
+  });
+
+  it("omits draft when creating a non-explicit pull request", async () => {
+    const octokit = {
+      pulls: {
+        create: vi.fn().mockResolvedValue({
+          data: {
+            number: 42,
+            html_url: "https://github.com/octo/example/pull/42",
+            state: "open",
+          },
+        }),
+      },
+    };
+
+    await createPullRequest(octokit as never, {
+      owner: "octo",
+      repo: "example",
+      title: "Update",
+      body: "Done",
+      head: "agentic-dispatch/job-1",
+      base: "main",
+    });
+
+    expect(octokit.pulls.create).toHaveBeenCalledWith({
+      owner: "octo",
+      repo: "example",
+      title: "Update",
+      body: "Done",
+      head: "agentic-dispatch/job-1",
+      base: "main",
     });
   });
 });

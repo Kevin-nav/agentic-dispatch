@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "convex:dev": "convex dev",
+    "convex:codegen": "convex codegen --typecheck enable",
     "convex:deploy": "convex deploy",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",

@@ -17,7 +17,7 @@ export type GitHubAppAuth = ReturnType<typeof createAppAuth>;
 
 export const githubAppRequiredPermissions = {
   contents: "write",
-  pullRequests: "write",
+  pull_requests: "write",
   workflows: "write",
 } as const;
 

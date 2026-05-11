@@ -9,11 +9,17 @@ export const appendJobEvent = mutation({
     message: v.string(),
     metadata: v.optional(v.any()),
   },
-  handler: async (ctx, args) =>
-    ctx.db.insert("jobEvents", {
-      ...args,
+  handler: async (ctx, args) => {
+    const event = {
+      jobId: args.jobId,
+      type: args.type,
+      message: args.message,
       createdAt: new Date().toISOString(),
-    }),
+      ...(args.metadata === undefined ? {} : { metadata: args.metadata }),
+    };
+
+    return ctx.db.insert("jobEvents", event);
+  },
 });
 
 export const listJobEvents = query({

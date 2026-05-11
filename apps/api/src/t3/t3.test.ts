@@ -118,6 +118,48 @@ describe("T3 monitor", () => {
     expect(state.assistantFinalResponse).toContain("Done:");
     expect(state.prUrl).toBe("https://github.com/acme/widgets/pull/42");
   });
+
+  it("detects ready session objects from real T3 snapshots", () => {
+    const state = inspectThreadSnapshot(
+      {
+        threadsByProject: {
+          "project-1": [
+            {
+              id: "thread-1",
+              session: { status: "ready" },
+              messages: [
+                {
+                  role: "assistant",
+                  text: "Finished the work.",
+                },
+              ],
+            },
+          ],
+        },
+      },
+      "thread-1",
+    );
+
+    expect(state.status).toBe("completed");
+    expect(state.assistantFinalResponse).toBe("Finished the work.");
+  });
+
+  it("does not mark an idle ready thread completed before an assistant response exists", () => {
+    const state = inspectThreadSnapshot(
+      {
+        threads: [
+          {
+            id: "thread-1",
+            session: { status: "ready" },
+            messages: [],
+          },
+        ],
+      },
+      "thread-1",
+    );
+
+    expect(state.status).toBe("unknown");
+  });
 });
 
 describe("async PR prompt", () => {

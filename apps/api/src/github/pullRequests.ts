@@ -27,14 +27,19 @@ export async function findPullRequestByBranch(
   octokit: Octokit,
   ref: PullRequestRef,
 ): Promise<PullRequestSummary | undefined> {
-  const response = await octokit.pulls.list({
+  const params: Parameters<Octokit["pulls"]["list"]>[0] = {
     owner: ref.owner,
     repo: ref.repo,
     head: ref.head,
-    base: ref.base,
     state: "open",
     per_page: 10,
-  });
+  };
+
+  if (ref.base) {
+    params.base = ref.base;
+  }
+
+  const response = await octokit.pulls.list(params);
 
   const pull = response.data[0];
   if (!pull) {
@@ -52,15 +57,20 @@ export async function createPullRequest(
   octokit: Octokit,
   input: CreatePullRequestInput,
 ): Promise<PullRequestSummary> {
-  const response = await octokit.pulls.create({
+  const params: Parameters<Octokit["pulls"]["create"]>[0] = {
     owner: input.owner,
     repo: input.repo,
     title: input.title,
     body: input.body,
     head: input.head,
     base: input.base,
-    draft: input.draft,
-  });
+  };
+
+  if (input.draft !== undefined) {
+    params.draft = input.draft;
+  }
+
+  const response = await octokit.pulls.create(params);
 
   return {
     number: response.data.number,

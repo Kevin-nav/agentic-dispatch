@@ -27,9 +27,9 @@ export function inspectThreadSnapshot(
 
   const text = collectText(thread);
   const failed = hasValue(thread, ["failed", "error", "errored"]);
-  const completed = hasValue(thread, ["completed"]) || hasSessionReady(thread);
   const running = hasValue(thread, ["running", "in_progress"]);
   const assistantFinalResponse = latestAssistantText(thread);
+  const completed = hasValue(thread, ["completed"]) || (hasSessionReady(thread) && !!assistantFinalResponse);
 
   return {
     status: failed ? "failed" : completed ? "completed" : running ? "running" : "unknown",
@@ -98,5 +98,16 @@ function hasValue(value: unknown, needles: string[]): boolean {
 function hasSessionReady(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
-  return record.session?.toString().toLowerCase() === "ready";
+  const session = record.session;
+
+  if (typeof session === "string") {
+    return session.toLowerCase() === "ready";
+  }
+
+  if (session && typeof session === "object") {
+    const status = (session as Record<string, unknown>).status;
+    return typeof status === "string" && status.toLowerCase() === "ready";
+  }
+
+  return false;
 }

@@ -24,6 +24,7 @@ kubectl apply -f infra/k8s/base/serviceaccounts.yaml
 kubectl apply -f infra/k8s/base/pod-security.yaml
 kubectl apply -f infra/k8s/base/networkpolicies/default-deny.yaml
 kubectl apply -f infra/k8s/base/networkpolicies/allow-dns.yaml
+kubectl apply -f infra/k8s/base/networkpolicies/allow-control-plane-internal.yaml
 ```
 
 The API service account intentionally has no broad RBAC. Add narrow Job/Pod permissions later only if the orchestrator needs them.
@@ -54,7 +55,9 @@ Deploy T3 first, then the API, then the web app:
 ```bash
 kubectl apply -f infra/k8s/apps/t3-deployment.yaml
 kubectl apply -f infra/k8s/apps/api-deployment.yaml
+kubectl apply -f infra/k8s/apps/api-service.yaml
 kubectl apply -f infra/k8s/apps/web-deployment.yaml
+kubectl apply -f infra/k8s/base/networkpolicies/allow-tailscale-ingress.yaml
 kubectl apply -f infra/k8s/tailscale/t3-service.yaml
 kubectl apply -f infra/k8s/tailscale/web-service.yaml
 ```

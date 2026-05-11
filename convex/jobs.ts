@@ -1,10 +1,40 @@
-import { assertJobStatusTransition, type JobStatus } from "@agentic-dispatch/shared";
 import { v } from "convex/values";
 
 import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { jobStatusValidator } from "./schema";
+
+type JobStatus =
+  | "queued"
+  | "preparing_workspace"
+  | "registered_in_t3"
+  | "running_in_t3"
+  | "blocked"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "timed_out";
+
+const allowedJobStatusTransitions: Record<JobStatus, readonly JobStatus[]> = {
+  queued: ["preparing_workspace", "cancelled", "failed"],
+  preparing_workspace: ["registered_in_t3", "failed", "cancelled", "timed_out"],
+  registered_in_t3: ["running_in_t3", "failed", "cancelled", "timed_out"],
+  running_in_t3: ["blocked", "completed", "failed", "cancelled", "timed_out"],
+  blocked: ["running_in_t3", "failed", "cancelled", "timed_out"],
+  completed: [],
+  failed: [],
+  cancelled: [],
+  timed_out: [],
+};
+
+function assertJobStatusTransition(from: JobStatus, to: JobStatus): void {
+  if (from === to || allowedJobStatusTransitions[from].includes(to)) {
+    return;
+  }
+
+  throw new Error(`Invalid job status transition: ${from} -> ${to}`);
+}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -17,13 +47,24 @@ async function appendJobEvent(
   message: string,
   metadata?: Record<string, unknown>,
 ) {
-  await ctx.db.insert("jobEvents", {
+  const event: {
+    jobId: Id<"jobs">;
+    type: string;
+    message: string;
+    metadata?: Record<string, unknown>;
+    createdAt: string;
+  } = {
     jobId,
     type,
     message,
-    metadata,
     createdAt: nowIso(),
-  });
+  };
+
+  if (metadata !== undefined) {
+    event.metadata = metadata;
+  }
+
+  await ctx.db.insert("jobEvents", event);
 }
 
 export const createJob = mutation({
