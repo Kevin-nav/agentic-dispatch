@@ -36,6 +36,9 @@ jobs:
           - name: web
             image: agentic-dispatch-web
             dockerfile: apps/web/Dockerfile
+          - name: t3
+            image: agentic-dispatch-t3
+            dockerfile: infra/docker/t3-code-server/Dockerfile
 
     steps:
       - name: Check out repository

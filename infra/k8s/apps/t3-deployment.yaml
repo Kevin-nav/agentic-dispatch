@@ -17,10 +17,37 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: bootstrap-codex-home
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              mkdir -p /codex-home
+              cp -L /codex-bootstrap/* /codex-home/ 2>/dev/null || true
+              chmod -R go-rwx /codex-home
+          volumeMounts:
+            - name: codex-bootstrap
+              mountPath: /codex-bootstrap
+              readOnly: true
+            - name: codex-home
+              mountPath: /codex-home
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop:
+                - ALL
       containers:
         - name: t3
-          image: ghcr.io/kevin-nav/t3-code-server:replace-before-task-9
-          imagePullPolicy: Always
+          image: ghcr.io/kevin-nav/agentic-dispatch-t3:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 3773
@@ -30,12 +57,18 @@ spec:
           env:
             - name: T3CODE_HOME
               value: /var/lib/t3code
+            - name: CODEX_HOME
+              value: /var/lib/codex
           volumeMounts:
             - name: t3-data
               mountPath: /var/lib/t3code
+            - name: codex-home
+              mountPath: /var/lib/codex
+            - name: workspace-data
+              mountPath: /workspaces/agentic-dispatch
           resources:
             requests:
-              cpu: 250m
+              cpu: 50m
               memory: 512Mi
             limits:
               cpu: "2"
@@ -52,6 +85,15 @@ spec:
         - name: t3-data
           persistentVolumeClaim:
             claimName: t3-code-server-data
+        - name: workspace-data
+          persistentVolumeClaim:
+            claimName: agentic-dispatch-workspaces
+        - name: codex-home
+          emptyDir: {}
+        - name: codex-bootstrap
+          secret:
+            secretName: agentic-dispatch-codex-home
+            optional: false
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

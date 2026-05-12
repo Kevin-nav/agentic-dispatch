@@ -44,6 +44,7 @@ jobs:
 
           sudo crictl pull ghcr.io/kevin-nav/agentic-dispatch-api:latest
           sudo crictl pull ghcr.io/kevin-nav/agentic-dispatch-web:latest
+          sudo crictl pull ghcr.io/kevin-nav/agentic-dispatch-t3:latest
 
           sudo kubectl apply -f infra/k8s/base/namespace.yaml
           sudo kubectl apply -f infra/k8s/base/serviceaccounts.yaml
@@ -55,11 +56,14 @@ jobs:
           sudo kubectl apply -f infra/k8s/base/networkpolicies/allow-cloudflare-tunnel.yaml
           sudo kubectl apply -f infra/k8s/infisical/serviceaccount.yaml
           sudo kubectl apply -f infra/k8s/infisical/infisical-secrets.yaml
+          sudo kubectl apply -f infra/k8s/apps/t3-deployment.yaml
+          sudo kubectl apply -f infra/k8s/apps/t3-service.yaml
           sudo kubectl apply -f infra/k8s/apps/api-deployment.yaml
           sudo kubectl apply -f infra/k8s/apps/api-service.yaml
           sudo kubectl apply -f infra/k8s/apps/web-deployment.yaml
           sudo kubectl apply -f infra/k8s/apps/web-service.yaml
           sudo kubectl apply -f infra/k8s/cloudflare/cloudflared-deployment.yaml
+          sudo kubectl rollout status deployment/t3-code-server -n agentic-dispatch --timeout=240s
           sudo kubectl rollout status deployment/agentic-dispatch-api -n agentic-dispatch --timeout=240s
           sudo kubectl rollout status deployment/agentic-dispatch-web -n agentic-dispatch --timeout=240s
           sudo kubectl rollout status deployment/agentic-dispatch-cloudflared -n agentic-dispatch --timeout=120s
