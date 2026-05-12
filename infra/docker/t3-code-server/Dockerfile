@@ -21,7 +21,7 @@ ENV T3CODE_HOME=/var/lib/t3code
 ENV CODEX_HOME=/var/lib/codex
 
 COPY --from=build /opt/npm-global /opt/npm-global
-COPY entrypoint.sh /usr/local/bin/t3-code-server-entrypoint
+COPY infra/docker/t3-code-server/entrypoint.sh /usr/local/bin/t3-code-server-entrypoint
 
 RUN chmod 0755 /usr/local/bin/t3-code-server-entrypoint \
   && mkdir -p /var/lib/t3code /var/lib/codex /workspaces/agentic-dispatch \
