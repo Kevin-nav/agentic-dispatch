@@ -47,9 +47,10 @@ Current status:
 - Cloudflare tunnel config currently reports hostname `dispatch.sankoslides.com`.
 - API deployment is running: `agentic-dispatch-api` is `1/1`.
 - Web deployment is running: `agentic-dispatch-web` is `1/1`.
+- T3 deployment is running: `t3-code-server` is `1/1`.
 - Public web route responds with HTTP 200 at `https://dispatch.sankoslides.com`.
 - Public API proxy responds at `https://dispatch.sankoslides.com/api/health`.
-- `/api/health` reports `api`, `convex`, and `github` as `ok`; `t3` is `degraded` because T3 is still intentionally gated.
+- `/api/health` reports `api`, `convex`, `github`, and `t3` as `ok`.
 
 Resolved issue:
 
@@ -68,8 +69,13 @@ Additional fix:
 
 T3 status:
 
-- T3 deployment was not applied.
-- `infra/k8s/apps/t3-deployment.yaml` still requires a verified packaged T3 Code server image.
-- `T3_OWNER_BEARER_TOKEN` is intentionally deferred until T3 is deployed and paired.
+- T3 image is `ghcr.io/kevin-nav/agentic-dispatch-t3:latest`.
+- The image installs the official npm package `t3@0.0.23` and `@openai/codex@0.130.0`; it does not build from the local `t3code` clone.
+- T3 uses persistent PVC `t3-code-server-data`.
+- T3 mounts the shared workspace PVC `agentic-dispatch-workspaces` at `/workspaces/agentic-dispatch`.
+- T3 Codex auth is bootstrapped from Kubernetes secret `agentic-dispatch-codex-home`.
+- A T3 owner bearer token was issued from inside the T3 pod and manually injected into Kubernetes secret `agentic-dispatch-api-env` for immediate validation.
+- Infisical production still needs `T3_OWNER_BEARER_TOKEN` added through the UI because the current machine identity can read/sync but received `403` on secret writes.
+- `infra/k8s/infisical/infisical-secrets.yaml` now includes `T3_OWNER_BEARER_TOKEN` in the API env template so the operator will preserve it after the Infisical value exists.
 
 No secret values, bearer tokens, private keys, pairing tokens, raw environment dumps, or unredacted command output were recorded.
