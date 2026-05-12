@@ -26,10 +26,23 @@ export function inspectThreadSnapshot(
   }
 
   const text = collectText(thread);
-  const failed = hasValue(thread, ["failed", "error", "errored"]);
-  const running = hasValue(thread, ["running", "in_progress"]);
   const assistantFinalResponse = latestAssistantText(thread);
-  const completed = hasValue(thread, ["completed"]) || (hasSessionReady(thread) && !!assistantFinalResponse);
+  const sessionStatus = getSessionStatus(thread);
+  const latestTurnStatus = getLatestTurnStatus(thread);
+  const failed =
+    sessionStatus === "error" ||
+    sessionStatus === "failed" ||
+    latestTurnStatus === "error" ||
+    latestTurnStatus === "failed" ||
+    latestTurnStatus === "errored";
+  const running =
+    sessionStatus === "running" ||
+    sessionStatus === "starting" ||
+    latestTurnStatus === "running" ||
+    latestTurnStatus === "in_progress";
+  const completed =
+    !!assistantFinalResponse &&
+    (sessionStatus === "ready" || latestTurnStatus === "completed");
 
   return {
     status: failed ? "failed" : completed ? "completed" : running ? "running" : "unknown",
@@ -86,28 +99,42 @@ function collectText(value: unknown): string {
   return Object.values(value).map(collectText).join("\n");
 }
 
-function hasValue(value: unknown, needles: string[]): boolean {
-  if (typeof value === "string") {
-    return needles.includes(value.toLowerCase());
-  }
-
-  if (!value || typeof value !== "object") return false;
-  return Object.values(value).some((child) => hasValue(child, needles));
-}
-
-function hasSessionReady(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
+function getSessionStatus(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
   const record = value as Record<string, unknown>;
   const session = record.session;
 
   if (typeof session === "string") {
-    return session.toLowerCase() === "ready";
+    return session.toLowerCase();
   }
 
   if (session && typeof session === "object") {
     const status = (session as Record<string, unknown>).status;
-    return typeof status === "string" && status.toLowerCase() === "ready";
+    return typeof status === "string" ? status.toLowerCase() : undefined;
   }
 
-  return false;
+  return undefined;
+}
+
+function getLatestTurnStatus(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  const latestTurn = record.latestTurn;
+
+  if (latestTurn && typeof latestTurn === "object") {
+    const turn = latestTurn as Record<string, unknown>;
+    const status = turn.status ?? turn.state;
+    return typeof status === "string" ? status.toLowerCase() : undefined;
+  }
+
+  if (Array.isArray(record.turns) && record.turns.length > 0) {
+    const latest = record.turns.at(-1);
+    if (latest && typeof latest === "object") {
+      const turn = latest as Record<string, unknown>;
+      const status = turn.status ?? turn.state;
+      return typeof status === "string" ? status.toLowerCase() : undefined;
+    }
+  }
+
+  return undefined;
 }

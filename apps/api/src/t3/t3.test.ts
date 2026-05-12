@@ -160,6 +160,30 @@ describe("T3 monitor", () => {
 
     expect(state.status).toBe("unknown");
   });
+
+  it("does not treat completed activity text as terminal while the session is still running", () => {
+    const state = inspectThreadSnapshot(
+      {
+        threads: [
+          {
+            id: "thread-1",
+            session: { status: "running" },
+            messages: [
+              {
+                role: "assistant",
+                text: "I changed the file and will push next.",
+              },
+            ],
+            activities: [{ kind: "tool.completed" }],
+          },
+        ],
+      },
+      "thread-1",
+    );
+
+    expect(state.status).toBe("running");
+    expect(state.prUrl).toBeUndefined();
+  });
 });
 
 describe("async PR prompt", () => {
