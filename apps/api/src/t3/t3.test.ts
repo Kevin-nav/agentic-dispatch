@@ -8,6 +8,7 @@ import {
 } from "./commands.js";
 import { inspectThreadSnapshot } from "./monitor.js";
 import { buildAsyncPrPrompt } from "./promptContract.js";
+import { buildT3SessionUrl } from "./sessionUrl.js";
 
 describe("T3 command builders", () => {
   it("builds v0.0.23-compatible command payloads", () => {
@@ -183,6 +184,49 @@ describe("T3 monitor", () => {
 
     expect(state.status).toBe("running");
     expect(state.prUrl).toBeUndefined();
+  });
+
+  it("does not complete while T3 has a running active turn with a completed latest turn", () => {
+    const state = inspectThreadSnapshot(
+      {
+        threads: [
+          {
+            id: "thread-1",
+            session: {
+              status: "running",
+              activeTurnId: "turn-1",
+            },
+            latestTurn: {
+              state: "completed",
+              assistantMessageId: "assistant:progress",
+            },
+            messages: [
+              {
+                id: "assistant:progress",
+                role: "assistant",
+                text: "The commit is created. I am pushing the branch now.",
+              },
+            ],
+          },
+        ],
+      },
+      "thread-1",
+    );
+
+    expect(state.status).toBe("running");
+    expect(state.prUrl).toBeUndefined();
+  });
+});
+
+describe("T3 session URLs", () => {
+  it("builds hosted app URLs for environment-scoped threads", () => {
+    expect(
+      buildT3SessionUrl({
+        hostedAppBaseUrl: "https://app.t3.codes",
+        environmentId: "environment-1",
+        threadId: "thread-1",
+      }),
+    ).toBe("https://app.t3.codes/environment-1/thread-1");
   });
 });
 

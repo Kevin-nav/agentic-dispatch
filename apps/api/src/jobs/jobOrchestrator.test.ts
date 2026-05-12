@@ -35,7 +35,11 @@ function makeDeps(store = makeStore(), t3Overrides: Partial<T3JobClient> = {}) {
   const activeJobs = new ActiveJobRegistry();
   const t3: T3JobClient = {
     createProject: vi.fn(async () => ({ projectId: "project-1" })),
-    createThread: vi.fn(async () => ({ threadId: "thread-1" })),
+    createThread: vi.fn(async () => ({
+      threadId: "thread-1",
+      t3EnvironmentId: "environment-1",
+      t3SessionUrl: "https://app.t3.codes/environment-1/thread-1",
+    })),
     startTurn: vi.fn(async () => undefined),
     interruptTurn: vi.fn(async () => undefined),
     pollThreadOnce: vi.fn(async () => ({
@@ -76,6 +80,7 @@ describe("job orchestrator", () => {
     expect(result.status).toBe("completed");
     expect(result.t3ProjectId).toBe("project-1");
     expect(result.t3ThreadId).toBe("thread-1");
+    expect(result.t3SessionUrl).toBe("https://app.t3.codes/environment-1/thread-1");
     expect(result.prUrl).toBe("https://github.com/Kevin-nav/demo/pull/42");
     expect(t3.startTurn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -83,6 +88,30 @@ describe("job orchestrator", () => {
         prompt: expect.stringContaining("Do not ask follow-up questions."),
       }),
     );
+  });
+
+  it("prepares an interactive T3 session without starting an autonomous turn", async () => {
+    const store = makeStore();
+    const job = await createJob(
+      {
+        repoOwner: "Kevin-nav",
+        repoName: "demo",
+        baseBranch: "main",
+        prompt: "Help me inspect this repo interactively",
+        mode: "interactive_t3",
+      },
+      store,
+    );
+    const { deps, t3 } = makeDeps(store);
+
+    const result = await runJob(job.id, deps, { pollIntervalMs: 1, timeoutMs: 100 });
+
+    expect(result.status).toBe("completed");
+    expect(result.mode).toBe("interactive_t3");
+    expect(result.t3ThreadId).toBe("thread-1");
+    expect(result.t3SessionUrl).toBe("https://app.t3.codes/environment-1/thread-1");
+    expect(t3.startTurn).not.toHaveBeenCalled();
+    expect(t3.pollThreadOnce).not.toHaveBeenCalled();
   });
 
   it("marks a T3 dispatch failure as failed", async () => {

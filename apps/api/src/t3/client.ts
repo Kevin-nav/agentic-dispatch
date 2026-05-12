@@ -19,7 +19,19 @@ export interface DispatchResponse {
   sequence?: number;
 }
 
+export interface T3EnvironmentDescriptor {
+  environmentId: string;
+  label?: string;
+  serverVersion?: string;
+}
+
 export type T3Snapshot = Record<string, unknown>;
+
+export async function getEnvironment(config: T3ClientConfig): Promise<T3EnvironmentDescriptor> {
+  return requestJson<T3EnvironmentDescriptor>(config, "/.well-known/t3/environment", {
+    method: "GET",
+  });
+}
 
 export async function getSnapshot(config: T3ClientConfig): Promise<T3Snapshot> {
   return requestJson<T3Snapshot>(config, "/api/orchestration/snapshot", {

@@ -22,6 +22,7 @@ export async function createJob(request: CreateJobRequest, store: JobStore) {
     baseBranch: normalized.baseBranch,
     workBranch,
     prompt: normalized.prompt,
+    mode: normalized.mode,
   });
 }
 
@@ -35,8 +36,8 @@ function normalizeCreateJobRequest(request: CreateJobRequest): Required<CreateJo
   if (!repoOwner) throw new Error("repoOwner is required");
   if (!repoName) throw new Error("repoName is required");
   if (!prompt) throw new Error("prompt is required");
-  if (mode !== "async_pr") {
-    throw new Error("Only async_pr jobs are supported by the orchestrator");
+  if (mode !== "async_pr" && mode !== "interactive_t3") {
+    throw new Error("Unsupported job mode");
   }
 
   return { repoOwner, repoName, baseBranch, prompt, mode };

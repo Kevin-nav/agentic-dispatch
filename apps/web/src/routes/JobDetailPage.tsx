@@ -110,9 +110,29 @@ export function JobDetailPage() {
           <span className="detail-value">{job.workBranch}</span>
         </div>
         <div className="detail-row">
+          <span className="detail-label">Mode</span>
+          <span className="detail-value">
+            {job.mode === "interactive_t3" ? "Interactive T3" : "Async PR"}
+          </span>
+        </div>
+        <div className="detail-row">
           <span className="detail-label">Created</span>
           <span className="detail-value">{timeAgo(job.createdAt)}</span>
         </div>
+        {job.t3SessionUrl && (
+          <div className="detail-row">
+            <span className="detail-label">T3 Session</span>
+            <a
+              href={job.t3SessionUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="detail-value"
+              style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}
+            >
+              <Icon name="external-link" size={12} /> Open in T3
+            </a>
+          </div>
+        )}
         {job.t3ThreadId && (
           <div className="detail-row">
             <span className="detail-label">T3 Thread</span>

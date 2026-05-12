@@ -1,5 +1,6 @@
 import {
   type JobEventRecord,
+  type JobMode,
   type JobRecord,
   type JobStatus,
   assertJobStatusTransition,
@@ -29,6 +30,7 @@ export interface CreateStoredJobInput {
   baseBranch: string;
   workBranch: string;
   prompt: string;
+  mode: JobMode;
 }
 
 export interface JobStore {
@@ -37,7 +39,13 @@ export interface JobStore {
   listJobs?(): Promise<JobRecord[]>;
   listJobEvents?(jobId: string): Promise<JobEventRecord[]>;
   updateJobStatus(jobId: string, status: JobStatus, message?: string): Promise<void>;
-  attachT3Thread(jobId: string, t3ProjectId: string, t3ThreadId: string): Promise<void>;
+  attachT3Thread(
+    jobId: string,
+    t3ProjectId: string,
+    t3ThreadId: string,
+    t3EnvironmentId?: string,
+    t3SessionUrl?: string,
+  ): Promise<void>;
   attachPullRequest(jobId: string, prUrl: string): Promise<void>;
   markJobFailed(
     jobId: string,
@@ -130,12 +138,20 @@ export class InMemoryJobStore implements JobStore {
     });
   }
 
-  async attachT3Thread(jobId: string, t3ProjectId: string, t3ThreadId: string): Promise<void> {
+  async attachT3Thread(
+    jobId: string,
+    t3ProjectId: string,
+    t3ThreadId: string,
+    t3EnvironmentId?: string,
+    t3SessionUrl?: string,
+  ): Promise<void> {
     this.requireJob(jobId);
-    this.patchJob(jobId, { t3ProjectId, t3ThreadId });
+    this.patchJob(jobId, { t3ProjectId, t3ThreadId, t3EnvironmentId, t3SessionUrl });
     this.appendEvent(jobId, "t3_thread_attached", "T3 thread attached", {
       t3ProjectId,
       t3ThreadId,
+      t3EnvironmentId,
+      t3SessionUrl,
     });
   }
 

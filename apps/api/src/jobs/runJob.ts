@@ -32,7 +32,7 @@ export interface T3JobClient {
     title: string;
     branch: string;
     worktreePath: string;
-  }): Promise<{ threadId: string }>;
+  }): Promise<{ threadId: string; t3EnvironmentId?: string; t3SessionUrl?: string }>;
   startTurn(input: { threadId: string; prompt: string; titleSeed: string }): Promise<unknown>;
   interruptTurn(input: { threadId: string }): Promise<unknown>;
   pollThreadOnce(threadId: string): Promise<T3ThreadMonitorState>;
@@ -79,10 +79,20 @@ export async function runJob(
     const workspace = await prepareWorkspaceForJob(job, jobId, token, deps);
 
     throwIfAborted(signal);
-    const { projectId, threadId } = await registerJobInT3(job, jobId, workspace, deps);
+    const { projectId, threadId, t3EnvironmentId, t3SessionUrl } = await registerJobInT3(
+      job,
+      jobId,
+      workspace,
+      deps,
+    );
     deps.activeJobs?.setT3Thread(jobId, threadId);
-    await deps.store.attachT3Thread(jobId, projectId, threadId);
+    await deps.store.attachT3Thread(jobId, projectId, threadId, t3EnvironmentId, t3SessionUrl);
     await deps.store.updateJobStatus(jobId, "registered_in_t3", "Registered job in T3");
+
+    if (job.mode === "interactive_t3") {
+      await deps.store.updateJobStatus(jobId, "completed", "Interactive T3 session ready");
+      return requireJob(deps.store, jobId);
+    }
 
     const prompt = buildAsyncPrPrompt({
       owner: job.repoOwner,
@@ -139,7 +149,12 @@ async function registerJobInT3(
   jobId: string,
   workspace: PreparedWorkspace,
   deps: RunJobDependencies,
-): Promise<{ projectId: string; threadId: string }> {
+): Promise<{
+  projectId: string;
+  threadId: string;
+  t3EnvironmentId?: string;
+  t3SessionUrl?: string;
+}> {
   try {
     const project = await deps.t3.createProject({
       title: `${job.repoOwner}/${job.repoName}`,
@@ -151,7 +166,12 @@ async function registerJobInT3(
       branch: job.workBranch,
       worktreePath: workspace.path,
     });
-    return { projectId: project.projectId, threadId: thread.threadId };
+    return {
+      projectId: project.projectId,
+      threadId: thread.threadId,
+      t3EnvironmentId: thread.t3EnvironmentId,
+      t3SessionUrl: thread.t3SessionUrl,
+    };
   } catch (error) {
     throw new CategorizedJobError("t3_dispatch_failed", errorMessage(error));
   }

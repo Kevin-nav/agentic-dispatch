@@ -19,7 +19,7 @@ type JobStatus =
 const allowedJobStatusTransitions: Record<JobStatus, readonly JobStatus[]> = {
   queued: ["preparing_workspace", "cancelled", "failed"],
   preparing_workspace: ["registered_in_t3", "failed", "cancelled", "timed_out"],
-  registered_in_t3: ["running_in_t3", "failed", "cancelled", "timed_out"],
+  registered_in_t3: ["running_in_t3", "completed", "failed", "cancelled", "timed_out"],
   running_in_t3: ["blocked", "completed", "failed", "cancelled", "timed_out"],
   blocked: ["running_in_t3", "failed", "cancelled", "timed_out"],
   completed: [],
@@ -74,6 +74,7 @@ export const createJob = mutation({
     baseBranch: v.string(),
     workBranch: v.string(),
     prompt: v.string(),
+    mode: v.union(v.literal("async_pr"), v.literal("interactive_t3")),
   },
   handler: async (ctx, args) => {
     const timestamp = nowIso();
@@ -114,13 +115,23 @@ export const attachT3Thread = mutation({
     jobId: v.id("jobs"),
     t3ProjectId: v.string(),
     t3ThreadId: v.string(),
+    t3EnvironmentId: v.optional(v.string()),
+    t3SessionUrl: v.optional(v.string()),
   },
-  handler: async (ctx, { jobId, t3ProjectId, t3ThreadId }) => {
+  handler: async (ctx, { jobId, t3ProjectId, t3ThreadId, t3EnvironmentId, t3SessionUrl }) => {
     const timestamp = nowIso();
-    await ctx.db.patch(jobId, { t3ProjectId, t3ThreadId, updatedAt: timestamp });
+    await ctx.db.patch(jobId, {
+      t3ProjectId,
+      t3ThreadId,
+      t3EnvironmentId,
+      t3SessionUrl,
+      updatedAt: timestamp,
+    });
     await appendJobEvent(ctx, jobId, "t3_thread_attached", "T3 thread attached", {
       t3ProjectId,
       t3ThreadId,
+      t3EnvironmentId,
+      t3SessionUrl,
     });
   },
 });

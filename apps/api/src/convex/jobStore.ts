@@ -25,6 +25,7 @@ export class ConvexJobStore implements JobStore {
       baseBranch: input.baseBranch,
       workBranch: input.workBranch,
       prompt: input.prompt,
+      mode: input.mode,
     });
 
     const job = await this.getJob(jobId);
@@ -51,8 +52,20 @@ export class ConvexJobStore implements JobStore {
     await this.mutation("jobs:updateJobStatus", { jobId, status, message });
   }
 
-  async attachT3Thread(jobId: string, t3ProjectId: string, t3ThreadId: string): Promise<void> {
-    await this.mutation("jobs:attachT3Thread", { jobId, t3ProjectId, t3ThreadId });
+  async attachT3Thread(
+    jobId: string,
+    t3ProjectId: string,
+    t3ThreadId: string,
+    t3EnvironmentId?: string,
+    t3SessionUrl?: string,
+  ): Promise<void> {
+    await this.mutation("jobs:attachT3Thread", {
+      jobId,
+      t3ProjectId,
+      t3ThreadId,
+      t3EnvironmentId,
+      t3SessionUrl,
+    });
   }
 
   async attachPullRequest(jobId: string, prUrl: string): Promise<void> {
@@ -108,10 +121,13 @@ function mapJob(row: ConvexRecord): JobRecord {
     baseBranch: requireString(row.baseBranch, "job.baseBranch"),
     workBranch: requireString(row.workBranch, "job.workBranch"),
     prompt: requireString(row.prompt, "job.prompt"),
+    mode: optionalString(row.mode) === "interactive_t3" ? "interactive_t3" : "async_pr",
     status: requireString(row.status, "job.status") as JobStatus,
     failureReason: optionalString(row.failureReason),
     t3ProjectId: optionalString(row.t3ProjectId),
     t3ThreadId: optionalString(row.t3ThreadId),
+    t3EnvironmentId: optionalString(row.t3EnvironmentId),
+    t3SessionUrl: optionalString(row.t3SessionUrl),
     prUrl: optionalString(row.prUrl),
     createdAt: requireString(row.createdAt, "job.createdAt"),
     updatedAt: requireString(row.updatedAt, "job.updatedAt"),

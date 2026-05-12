@@ -16,11 +16,13 @@ import { runJob, type GitHubJobClient, type T3JobClient, type WorkspaceManager }
 import {
   createProject,
   createThread,
+  getEnvironment,
   interruptTurn,
   startTurn,
   type T3ClientConfig,
 } from "../t3/client.js";
 import { pollThreadOnce } from "../t3/monitor.js";
+import { buildT3SessionUrl } from "../t3/sessionUrl.js";
 import { prepareWorkspace } from "../workspaces/workspaceManager.js";
 
 export interface ServerDependencies {
@@ -74,7 +76,22 @@ export function buildDefaultDependencies(env: AppEnv): ServerDependencies {
 
   const t3: T3JobClient = {
     createProject: async (input) => createProject(t3Config, input),
-    createThread: async (input) => createThread(t3Config, input),
+    createThread: async (input) => {
+      const [thread, environment] = await Promise.all([
+        createThread(t3Config, input),
+        getEnvironment(t3Config),
+      ]);
+
+      return {
+        threadId: thread.threadId,
+        t3EnvironmentId: environment.environmentId,
+        t3SessionUrl: buildT3SessionUrl({
+          hostedAppBaseUrl: env.t3HostedAppBaseUrl,
+          environmentId: environment.environmentId,
+          threadId: thread.threadId,
+        }),
+      };
+    },
     startTurn: async (input) => startTurn(t3Config, input),
     interruptTurn: async (input) => interruptTurn(t3Config, input),
     pollThreadOnce: async (threadId) => pollThreadOnce(t3Config, threadId),

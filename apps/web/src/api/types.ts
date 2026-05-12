@@ -16,6 +16,7 @@ export const jobStatuses = [
 ] as const;
 
 export type JobStatus = (typeof jobStatuses)[number];
+export type JobMode = "async_pr" | "interactive_t3";
 
 export interface JobRecord {
   id: string;
@@ -24,10 +25,13 @@ export interface JobRecord {
   baseBranch: string;
   workBranch: string;
   prompt: string;
+  mode: JobMode;
   status: JobStatus;
   failureReason?: string;
   t3ProjectId?: string;
   t3ThreadId?: string;
+  t3EnvironmentId?: string;
+  t3SessionUrl?: string;
   prUrl?: string;
   createdAt: string;
   updatedAt: string;

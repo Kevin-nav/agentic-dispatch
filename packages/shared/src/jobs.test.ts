@@ -46,6 +46,7 @@ describe("job records", () => {
       baseBranch: "main",
       workBranch: "agentic-dispatch/job_1-test",
       prompt: "Test",
+      mode: "async_pr",
       status: "completed",
       prUrl: "https://github.com/Kevin-nav/agentic-dispatch/pull/1",
       createdAt: "2026-05-10T00:00:00.000Z",

@@ -3,6 +3,7 @@ export interface AppEnv {
   convexUrl?: string;
   port: number;
   t3BaseUrl: string;
+  t3HostedAppBaseUrl: string;
   t3OwnerBearerToken: string;
   workspaceRoot: string;
   jobPollIntervalMs: number;
@@ -17,6 +18,7 @@ export function loadEnv(): AppEnv {
     t3BaseUrl:
       process.env.T3_BASE_URL ??
       "http://t3-code-server.agentic-dispatch.svc.cluster.local:3773",
+    t3HostedAppBaseUrl: process.env.T3_HOSTED_APP_BASE_URL ?? "https://app.t3.codes",
     t3OwnerBearerToken: process.env.T3_OWNER_BEARER_TOKEN ?? "",
     workspaceRoot:
       process.env.AGENTIC_DISPATCH_WORKSPACE_ROOT ??

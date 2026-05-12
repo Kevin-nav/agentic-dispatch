@@ -29,6 +29,7 @@ export function inspectThreadSnapshot(
   const assistantFinalResponse = latestAssistantText(thread);
   const sessionStatus = getSessionStatus(thread);
   const latestTurnStatus = getLatestTurnStatus(thread);
+  const activeTurnId = getActiveTurnId(thread);
   const failed =
     sessionStatus === "error" ||
     sessionStatus === "failed" ||
@@ -38,14 +39,15 @@ export function inspectThreadSnapshot(
   const running =
     sessionStatus === "running" ||
     sessionStatus === "starting" ||
+    !!activeTurnId ||
     latestTurnStatus === "running" ||
     latestTurnStatus === "in_progress";
   const completed =
     !!assistantFinalResponse &&
-    (sessionStatus === "ready" || latestTurnStatus === "completed");
+    (sessionStatus === "ready" || (!sessionStatus && latestTurnStatus === "completed"));
 
   return {
-    status: failed ? "failed" : completed ? "completed" : running ? "running" : "unknown",
+    status: failed ? "failed" : running ? "running" : completed ? "completed" : "unknown",
     assistantFinalResponse,
     prUrl: (assistantFinalResponse ?? text).match(prUrlPattern)?.[0],
     rawThread: thread,
@@ -134,6 +136,19 @@ function getLatestTurnStatus(value: unknown): string | undefined {
       const status = turn.status ?? turn.state;
       return typeof status === "string" ? status.toLowerCase() : undefined;
     }
+  }
+
+  return undefined;
+}
+
+function getActiveTurnId(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  const session = record.session;
+
+  if (session && typeof session === "object") {
+    const activeTurnId = (session as Record<string, unknown>).activeTurnId;
+    return typeof activeTurnId === "string" && activeTurnId.length > 0 ? activeTurnId : undefined;
   }
 
   return undefined;
