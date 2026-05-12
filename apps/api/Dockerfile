@@ -16,6 +16,8 @@ RUN pnpm prune --prod
 
 FROM node:24-alpine AS runtime
 
+RUN apk add --no-cache ca-certificates git openssh-client
+
 ENV NODE_ENV=production
 ENV PORT=3000
 WORKDIR /app
