@@ -74,8 +74,17 @@ T3 status:
 - T3 uses persistent PVC `t3-code-server-data`.
 - T3 mounts the shared workspace PVC `agentic-dispatch-workspaces` at `/workspaces/agentic-dispatch`.
 - T3 Codex auth is bootstrapped from Kubernetes secret `agentic-dispatch-codex-home`.
-- A T3 owner bearer token was issued from inside the T3 pod and manually injected into Kubernetes secret `agentic-dispatch-api-env` for immediate validation.
-- Infisical production still needs `T3_OWNER_BEARER_TOKEN` added through the UI because the current machine identity can read/sync but received `403` on secret writes.
-- `infra/k8s/infisical/infisical-secrets.yaml` now includes `T3_OWNER_BEARER_TOKEN` in the API env template so the operator will preserve it after the Infisical value exists.
+- A T3 owner bearer token was issued from inside the T3 pod.
+- Infisical Production now includes `T3_OWNER_BEARER_TOKEN`.
+- `infra/k8s/infisical/infisical-secrets.yaml` includes `T3_OWNER_BEARER_TOKEN` in the API env template, and the operator sync populated it into Kubernetes secret `agentic-dispatch-api-env`.
+- API image `0ab405a` includes `git` and `openssh-client` in the runtime image, which T3 jobs need when working in cloned repositories.
+- API image `e66cc0c` scopes T3 terminal-state detection to the session/latest turn and waits for a final assistant response before marking a job completed.
+
+Validation status:
+
+- Public health is passing at `https://dispatch.sankoslides.com/api/health`.
+- GitHub App sync can see the disposable validation repo `Kevin-nav/agentic-dispatch-e2e`.
+- E2E job `jd712jmkx60852bg3fdck54vxd86jh27` created PR `https://github.com/Kevin-nav/agentic-dispatch-e2e/pull/1`.
+- E2E job `jd72x9177fg7htm7kka73s01vn86jegp` reached T3 but failed because the Codex provider reported a usage limit. This is an external quota blocker, not a Kubernetes, Cloudflare, GitHub, Infisical, or API health failure.
 
 No secret values, bearer tokens, private keys, pairing tokens, raw environment dumps, or unredacted command output were recorded.
