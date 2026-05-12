@@ -8,10 +8,22 @@ Public hostname:
 dispatch.sankoslides.com
 ```
 
-Tunnel origin target:
+Web tunnel origin target:
 
 ```text
 http://agentic-dispatch-web.agentic-dispatch.svc.cluster.local:80
+```
+
+T3 pairing/public backend hostname:
+
+```text
+t3-dispatch.sankoslides.com
+```
+
+T3 tunnel origin target:
+
+```text
+http://t3-code-server.agentic-dispatch.svc.cluster.local:3773
 ```
 
 The `cloudflared` pods run in the `agentic-dispatch` namespace so the tunnel token, network policy, and lifecycle stay scoped to this application.

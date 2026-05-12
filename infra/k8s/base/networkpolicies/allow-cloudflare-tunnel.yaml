@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-cloudflared-to-web
+  name: allow-cloudflared-to-services
   namespace: agentic-dispatch
 spec:
   podSelector:
@@ -17,6 +17,13 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: t3-code-server
+      ports:
+        - protocol: TCP
+          port: 3773
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -37,6 +44,26 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-t3-from-cloudflared
+  namespace: agentic-dispatch
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: t3-code-server
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentic-dispatch-cloudflared
+      ports:
+        - protocol: TCP
+          port: 3773
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
