@@ -45,25 +45,26 @@ Current status:
 
 - `cloudflared` is running and connected to Cloudflare.
 - Cloudflare tunnel config currently reports hostname `dispatch.sankoslides.com`.
-- API and web pods are blocked on GHCR image pull authorization.
+- API deployment is running: `agentic-dispatch-api` is `1/1`.
+- Web deployment is running: `agentic-dispatch-web` is `1/1`.
+- Public web route responds with HTTP 200 at `https://dispatch.sankoslides.com`.
+- Public API proxy responds at `https://dispatch.sankoslides.com/api/health`.
+- `/api/health` reports `api`, `convex`, and `github` as `ok`; `t3` is `degraded` because T3 is still intentionally gated.
 
-Blocking issue:
+Resolved issue:
 
 ```text
 failed to fetch oauth token from ghcr.io: 403 Forbidden
 ```
 
-The cluster cannot pull:
+- The GHCR package visibility was corrected by the repository owner.
+- API and web images were pulled into containerd on the VPS.
+- Kubernetes manifests now use `imagePullPolicy: IfNotPresent` to avoid forced authorization checks on every restart.
+- The deploy workflow pre-pulls the API and web images on the VPS before applying manifests.
 
-```text
-ghcr.io/kevin-nav/agentic-dispatch-api:latest
-ghcr.io/kevin-nav/agentic-dispatch-web:latest
-```
+Additional fix:
 
-Resolution options:
-
-1. Make both GHCR packages public.
-2. Create a Kubernetes image pull secret with a GitHub token that has `read:packages`.
+- API image `444837d` includes `apps/api/node_modules`, which is required for pnpm package dependency resolution at runtime.
 
 T3 status:
 
