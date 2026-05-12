@@ -86,5 +86,8 @@ Validation status:
 - GitHub App sync can see the disposable validation repo `Kevin-nav/agentic-dispatch-e2e`.
 - E2E job `jd712jmkx60852bg3fdck54vxd86jh27` created PR `https://github.com/Kevin-nav/agentic-dispatch-e2e/pull/1`.
 - E2E job `jd72x9177fg7htm7kka73s01vn86jegp` reached T3 but failed because the Codex provider reported a usage limit. This is an external quota blocker, not a Kubernetes, Cloudflare, GitHub, Infisical, or API health failure.
+- API/web image `bf16406` adds persisted T3 session URLs and interactive T3 jobs.
+- E2E job `jd7dbxh9b6cbzbzg1p9b7me7yn86kf2d` completed with persisted PR `https://github.com/Kevin-nav/agentic-dispatch-e2e/pull/3`.
+- Interactive job `jd73qknn0ypqm42vc78czwdyms86jhqe` completed with T3 session URL `https://app.t3.codes/b3bb1d95-d967-4b07-b937-4d9393adcdb9/b668efa6-d922-4cab-b1b9-7c3b2e79ac27`.
 
 No secret values, bearer tokens, private keys, pairing tokens, raw environment dumps, or unredacted command output were recorded.

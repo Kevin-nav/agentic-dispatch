@@ -5,7 +5,7 @@ Agentic Dispatch exposes the web application through Cloudflare Tunnel instead o
 Public hostname:
 
 ```text
-dispatch.sankslides.com
+dispatch.sankoslides.com
 ```
 
 Tunnel origin target:
