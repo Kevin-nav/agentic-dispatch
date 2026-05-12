@@ -10,7 +10,7 @@ on:
       repo_path:
         description: Absolute path to the Git checkout on the VPS
         required: true
-        default: /opt/agentic-dispatch
+        default: /opt/agentic-dispatch/repo
 
 permissions:
   contents: read
@@ -42,19 +42,25 @@ jobs:
           git checkout main
           git pull --ff-only origin main
 
-          kubectl apply -f infra/k8s/base/namespace.yaml
-          kubectl apply -f infra/k8s/base/serviceaccounts.yaml
-          kubectl apply -f infra/k8s/base/pod-security.yaml
-          kubectl apply -f infra/k8s/base/networkpolicies/default-deny.yaml
-          kubectl apply -f infra/k8s/base/networkpolicies/allow-dns.yaml
-          kubectl apply -f infra/k8s/base/networkpolicies/allow-control-plane-internal.yaml
-          kubectl apply -f infra/k8s/base/networkpolicies/allow-public-egress.yaml
-          kubectl apply -f infra/k8s/base/networkpolicies/allow-cloudflare-tunnel.yaml
-          kubectl apply -f infra/k8s/infisical/serviceaccount.yaml
-          kubectl apply -f infra/k8s/infisical/infisical-secrets.yaml
-          kubectl apply -f infra/k8s/apps/api-deployment.yaml
-          kubectl apply -f infra/k8s/apps/api-service.yaml
-          kubectl apply -f infra/k8s/apps/web-deployment.yaml
-          kubectl apply -f infra/k8s/apps/web-service.yaml
-          kubectl apply -f infra/k8s/cloudflare/cloudflared-deployment.yaml
+          sudo crictl pull ghcr.io/kevin-nav/agentic-dispatch-api:latest
+          sudo crictl pull ghcr.io/kevin-nav/agentic-dispatch-web:latest
+
+          sudo kubectl apply -f infra/k8s/base/namespace.yaml
+          sudo kubectl apply -f infra/k8s/base/serviceaccounts.yaml
+          sudo kubectl apply -f infra/k8s/base/pod-security.yaml
+          sudo kubectl apply -f infra/k8s/base/networkpolicies/default-deny.yaml
+          sudo kubectl apply -f infra/k8s/base/networkpolicies/allow-dns.yaml
+          sudo kubectl apply -f infra/k8s/base/networkpolicies/allow-control-plane-internal.yaml
+          sudo kubectl apply -f infra/k8s/base/networkpolicies/allow-public-egress.yaml
+          sudo kubectl apply -f infra/k8s/base/networkpolicies/allow-cloudflare-tunnel.yaml
+          sudo kubectl apply -f infra/k8s/infisical/serviceaccount.yaml
+          sudo kubectl apply -f infra/k8s/infisical/infisical-secrets.yaml
+          sudo kubectl apply -f infra/k8s/apps/api-deployment.yaml
+          sudo kubectl apply -f infra/k8s/apps/api-service.yaml
+          sudo kubectl apply -f infra/k8s/apps/web-deployment.yaml
+          sudo kubectl apply -f infra/k8s/apps/web-service.yaml
+          sudo kubectl apply -f infra/k8s/cloudflare/cloudflared-deployment.yaml
+          sudo kubectl rollout status deployment/agentic-dispatch-api -n agentic-dispatch --timeout=240s
+          sudo kubectl rollout status deployment/agentic-dispatch-web -n agentic-dispatch --timeout=240s
+          sudo kubectl rollout status deployment/agentic-dispatch-cloudflared -n agentic-dispatch --timeout=120s
           EOF
