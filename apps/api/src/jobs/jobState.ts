@@ -170,7 +170,14 @@ export class InMemoryJobStore implements JobStore {
     pullRequests: JobPullRequestRecord[],
   ): Promise<void> {
     this.requireJob(jobId);
-    this.patchJob(jobId, { pullRequests, prUrl: pullRequests[0]?.url });
+    if (pullRequests.length === 0) {
+      throw new Error("attachPullRequests requires at least one pull request");
+    }
+    const firstPullRequest = pullRequests[0];
+    if (!firstPullRequest) {
+      throw new Error("attachPullRequests requires at least one pull request");
+    }
+    this.patchJob(jobId, { pullRequests, prUrl: firstPullRequest.url });
     this.appendEvent(jobId, "pull_requests_attached", "Pull requests attached", {
       pullRequests,
     });

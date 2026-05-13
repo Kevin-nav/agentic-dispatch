@@ -223,15 +223,15 @@ export function JobDetailPage() {
               let dotClass = "timeline-dot";
               if (isLast && !isTerminal) dotClass += " timeline-dot--active";
               else if (
-                event.type.includes("pull_request") ||
-                event.message.toLowerCase().includes("completed")
-              ) {
-                dotClass += " timeline-dot--completed";
-              } else if (
                 event.type.includes("failed") ||
                 event.message.toLowerCase().includes("failed")
               ) {
                 dotClass += " timeline-dot--failed";
+              } else if (
+                event.type.includes("pull_request") ||
+                event.message.toLowerCase().includes("completed")
+              ) {
+                dotClass += " timeline-dot--completed";
               }
               const meta = metadataEntries(event.metadata);
 

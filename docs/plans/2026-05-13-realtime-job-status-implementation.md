@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Add Realtime Data Hooks
+## Task 1: Add Realtime Data Hooks
 
 **Files:**
 - Modify: `apps/web/package.json`
@@ -24,7 +24,7 @@
 4. Fall back to HTTP fetchers when Convex is not configured.
 5. Run `pnpm --filter @agentic-dispatch/web typecheck`.
 
-### Task 2: Wire Jobs List And Detail To Realtime Data
+## Task 2: Wire Jobs List And Detail To Realtime Data
 
 **Files:**
 - Modify: `apps/web/src/routes/JobsPage.tsx`
@@ -37,7 +37,7 @@
 4. Turn T3 labels into real links when a session URL exists.
 5. Build fallback T3 URLs from environment/thread IDs.
 
-### Task 3: Improve Job Status Copy And Timeline Metadata
+## Task 3: Improve Job Status Copy And Timeline Metadata
 
 **Files:**
 - Modify: `apps/api/src/jobs/runJob.ts`
@@ -51,7 +51,7 @@
 3. Render useful event metadata in the timeline.
 4. Ensure async and interactive jobs both show `Open in T3`.
 
-### Task 4: Verify And Commit
+## Task 4: Verify And Commit
 
 **Commands:**
 - `pnpm --filter @agentic-dispatch/web typecheck`
@@ -61,4 +61,3 @@
 
 **Commit:**
 - `git commit -m "feat: add realtime job status updates"`
-

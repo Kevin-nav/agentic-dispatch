@@ -171,10 +171,17 @@ export const attachPullRequests = mutation({
     pullRequests: v.array(jobPullRequestValidator),
   },
   handler: async (ctx, { jobId, pullRequests }) => {
+    if (pullRequests.length === 0) {
+      throw new Error("attachPullRequests requires at least one pull request");
+    }
+    const firstPullRequest = pullRequests[0];
+    if (!firstPullRequest) {
+      throw new Error("attachPullRequests requires at least one pull request");
+    }
     const timestamp = nowIso();
     await ctx.db.patch(jobId, {
       pullRequests,
-      prUrl: pullRequests[0]?.url,
+      prUrl: firstPullRequest.url,
       updatedAt: timestamp,
     });
     await appendJobEvent(ctx, jobId, "pull_requests_attached", "Pull requests attached", {

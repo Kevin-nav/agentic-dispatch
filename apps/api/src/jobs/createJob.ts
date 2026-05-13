@@ -62,13 +62,11 @@ function normalizeCreateJobRequest(request: CreateJobRequest): NormalizedCreateJ
   }
 
   const repos = request.repos ? normalizeRepoRequests(request.repos) : [normalizeLegacyRepo(request)];
-  if (repos.length === 0) throw new Error("At least one repository is required");
   if (mode === "async_pr" && !repos.some((repo) => repo.role === "editable")) {
     throw new Error("async_pr jobs require at least one editable repository");
   }
 
-  const primaryRepo = repos.find((repo) => repo.role === "editable") ?? repos[0];
-  if (!primaryRepo) throw new Error("At least one repository is required");
+  const primaryRepo = repos.find((repo) => repo.role === "editable") ?? repos[0]!;
 
   return {
     repoOwner: primaryRepo.owner,
@@ -114,7 +112,6 @@ function normalizeRepoRequests(repos: CreateJobRepoRequest[]): JobRepoRecord[] {
     if (role !== "editable" && role !== "context") {
       throw new Error(`repos[${index}].role is invalid`);
     }
-    if (!baseBranch) throw new Error(`repos[${index}].baseBranch is required`);
 
     const key = `${owner}/${repoName}`.toLowerCase();
     if (seen.has(key)) throw new Error(`Duplicate repository selected: ${owner}/${repoName}`);

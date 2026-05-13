@@ -6,9 +6,14 @@ import {
   fetchJob,
   fetchJobEvents,
   fetchJobs,
-  type JobEventRecord,
-  type JobRecord,
 } from "./client.js";
+import {
+  type JobEventRecord,
+  type JobPullRequestRecord,
+  type JobRecord,
+  type JobRepoRecord,
+  jobStatuses,
+} from "./types.js";
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL?.trim();
 const convexClient = convexUrl ? new ConvexReactClient(convexUrl) : null;
@@ -20,6 +25,7 @@ const listJobEventsRef = makeFunctionReference<"query", { jobId: string }, unkno
 );
 
 export type DataMode = "realtime" | "http";
+const realtimeFallbackMs = 4_000;
 
 interface AsyncState<T> {
   data: T;
@@ -49,16 +55,48 @@ export function useJobsData(): AsyncState<JobRecord[]> {
       };
     }
 
-    const watch = convexClient.watchQuery(listJobsRef, {});
-    const update = () => {
-      const jobs = watch.localQueryResult();
-      if (Array.isArray(jobs)) {
-        setState({ data: jobs.map(mapJob), loading: false, mode: "realtime" });
-      }
+    let unsubscribe: (() => void) | undefined;
+    let settled = false;
+    const fallback = () => {
+      unsubscribe?.();
+      fetchJobs()
+        .then((jobs) => setState({ data: jobs, loading: false, mode: "http" }))
+        .catch((error: unknown) => {
+          console.error("Failed to fall back to HTTP jobs fetch", error);
+          setState((prev) => ({ ...prev, loading: false, mode: "http" }));
+        });
     };
-    const unsubscribe = watch.onUpdate(update);
-    update();
-    return unsubscribe;
+    const timeout = window.setTimeout(() => {
+      if (!settled) fallback();
+    }, realtimeFallbackMs);
+
+    try {
+      const watch = convexClient.watchQuery(listJobsRef, {});
+      const update = () => {
+        try {
+          const jobs = watch.localQueryResult();
+          if (Array.isArray(jobs)) {
+            settled = true;
+            window.clearTimeout(timeout);
+            setState({ data: jobs.map(mapJob), loading: false, mode: "realtime" });
+          }
+        } catch (error) {
+          console.error("Failed to read realtime jobs result", error);
+          window.clearTimeout(timeout);
+          fallback();
+        }
+      };
+      unsubscribe = watch.onUpdate(update);
+      update();
+    } catch (error) {
+      console.error("Failed to subscribe to realtime jobs", error);
+      window.clearTimeout(timeout);
+      fallback();
+    }
+    return () => {
+      window.clearTimeout(timeout);
+      unsubscribe?.();
+    };
   }, []);
 
   return state;
@@ -92,16 +130,48 @@ export function useJobData(jobId: string | undefined): AsyncState<JobRecord | nu
       };
     }
 
-    const watch = convexClient.watchQuery(getJobRef, { jobId });
-    const update = () => {
-      const job = watch.localQueryResult();
-      if (job !== undefined) {
-        setState({ data: job ? mapJob(job) : null, loading: false, mode: "realtime" });
-      }
+    let unsubscribe: (() => void) | undefined;
+    let settled = false;
+    const fallback = () => {
+      unsubscribe?.();
+      fetchJob(jobId)
+        .then((job) => setState({ data: job, loading: false, mode: "http" }))
+        .catch((error: unknown) => {
+          console.error("Failed to fall back to HTTP job fetch", error);
+          setState((prev) => ({ ...prev, loading: false, mode: "http" }));
+        });
     };
-    const unsubscribe = watch.onUpdate(update);
-    update();
-    return unsubscribe;
+    const timeout = window.setTimeout(() => {
+      if (!settled) fallback();
+    }, realtimeFallbackMs);
+
+    try {
+      const watch = convexClient.watchQuery(getJobRef, { jobId });
+      const update = () => {
+        try {
+          const job = watch.localQueryResult();
+          if (job !== undefined) {
+            settled = true;
+            window.clearTimeout(timeout);
+            setState({ data: job ? mapJob(job) : null, loading: false, mode: "realtime" });
+          }
+        } catch (error) {
+          console.error("Failed to read realtime job result", error);
+          window.clearTimeout(timeout);
+          fallback();
+        }
+      };
+      unsubscribe = watch.onUpdate(update);
+      update();
+    } catch (error) {
+      console.error("Failed to subscribe to realtime job", error);
+      window.clearTimeout(timeout);
+      fallback();
+    }
+    return () => {
+      window.clearTimeout(timeout);
+      unsubscribe?.();
+    };
   }, [jobId]);
 
   return state;
@@ -135,16 +205,48 @@ export function useJobEventsData(jobId: string | undefined): AsyncState<JobEvent
       };
     }
 
-    const watch = convexClient.watchQuery(listJobEventsRef, { jobId });
-    const update = () => {
-      const events = watch.localQueryResult();
-      if (Array.isArray(events)) {
-        setState({ data: events.map(mapJobEvent), loading: false, mode: "realtime" });
-      }
+    let unsubscribe: (() => void) | undefined;
+    let settled = false;
+    const fallback = () => {
+      unsubscribe?.();
+      fetchJobEvents(jobId)
+        .then((events) => setState({ data: events, loading: false, mode: "http" }))
+        .catch((error: unknown) => {
+          console.error("Failed to fall back to HTTP job events fetch", error);
+          setState((prev) => ({ ...prev, loading: false, mode: "http" }));
+        });
     };
-    const unsubscribe = watch.onUpdate(update);
-    update();
-    return unsubscribe;
+    const timeout = window.setTimeout(() => {
+      if (!settled) fallback();
+    }, realtimeFallbackMs);
+
+    try {
+      const watch = convexClient.watchQuery(listJobEventsRef, { jobId });
+      const update = () => {
+        try {
+          const events = watch.localQueryResult();
+          if (Array.isArray(events)) {
+            settled = true;
+            window.clearTimeout(timeout);
+            setState({ data: events.map(mapJobEvent), loading: false, mode: "realtime" });
+          }
+        } catch (error) {
+          console.error("Failed to read realtime job events result", error);
+          window.clearTimeout(timeout);
+          fallback();
+        }
+      };
+      unsubscribe = watch.onUpdate(update);
+      update();
+    } catch (error) {
+      console.error("Failed to subscribe to realtime job events", error);
+      window.clearTimeout(timeout);
+      fallback();
+    }
+    return () => {
+      window.clearTimeout(timeout);
+      unsubscribe?.();
+    };
   }, [jobId]);
 
   return state;
@@ -156,7 +258,7 @@ export function useT3SessionUrl(job: JobRecord | null): string | undefined {
 
 export function buildT3SessionUrl(job: JobRecord | null): string | undefined {
   if (!job) return undefined;
-  if (job.t3SessionUrl) return job.t3SessionUrl;
+  if (job.t3SessionUrl && isHttpUrl(job.t3SessionUrl)) return job.t3SessionUrl;
   const hostedBaseUrl = import.meta.env.VITE_T3_HOSTED_APP_BASE_URL?.replace(/\/$/, "");
   if (!hostedBaseUrl || !job.t3EnvironmentId || !job.t3ThreadId) return undefined;
   return `${hostedBaseUrl}/${encodeURIComponent(job.t3EnvironmentId)}/${encodeURIComponent(job.t3ThreadId)}`;
@@ -176,20 +278,52 @@ function mapJob(value: unknown): JobRecord {
     workBranch,
     prompt: requireString(row.prompt),
     mode: optionalString(row.mode) === "interactive_t3" ? "interactive_t3" : "async_pr",
-    status: requireString(row.status) as JobRecord["status"],
+    status: requireJobStatus(row.status),
     failureReason: optionalString(row.failureReason),
     t3ProjectId: optionalString(row.t3ProjectId),
     t3ThreadId: optionalString(row.t3ThreadId),
     t3EnvironmentId: optionalString(row.t3EnvironmentId),
     t3SessionUrl: optionalString(row.t3SessionUrl),
     prUrl: optionalString(row.prUrl),
-    repos: Array.isArray(row.repos) ? (row.repos as JobRecord["repos"]) : undefined,
-    pullRequests: Array.isArray(row.pullRequests)
-      ? (row.pullRequests as JobRecord["pullRequests"])
-      : undefined,
+    repos: mapJobRepos(row.repos),
+    pullRequests: mapPullRequests(row.pullRequests),
     createdAt: requireString(row.createdAt),
     updatedAt: requireString(row.updatedAt),
   };
+}
+
+function mapJobRepos(value: unknown): JobRepoRecord[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.map((repo) => {
+    const row = requireRecord(repo);
+    return {
+      owner: requireString(row.owner),
+      repo: requireString(row.repo),
+      fullName: requireString(row.fullName),
+      role: requireJobRepoRole(row.role),
+      baseBranch: requireString(row.baseBranch),
+      workBranch: optionalString(row.workBranch),
+      path: optionalString(row.path),
+      status: requireJobRepoStatus(row.status),
+      failureReason: optionalString(row.failureReason),
+    };
+  });
+}
+
+function mapPullRequests(value: unknown): JobPullRequestRecord[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.map((pullRequest) => {
+    const row = requireRecord(pullRequest);
+    return {
+      owner: requireString(row.owner),
+      repo: requireString(row.repo),
+      url: requireString(row.url),
+      number: optionalNumber(row.number),
+      headBranch: optionalString(row.headBranch),
+      baseBranch: optionalString(row.baseBranch),
+      createdAt: requireString(row.createdAt),
+    };
+  });
 }
 
 function mapJobEvent(value: unknown): JobEventRecord {
@@ -218,6 +352,39 @@ function requireString(value: unknown): string {
   return value;
 }
 
+function requireJobStatus(value: unknown): JobRecord["status"] {
+  const status = requireString(value);
+  if ((jobStatuses as readonly string[]).includes(status)) return status as JobRecord["status"];
+  throw new Error("Invalid Convex realtime row");
+}
+
+function requireJobRepoRole(value: unknown): JobRepoRecord["role"] {
+  const role = requireString(value);
+  if (role === "editable" || role === "context") return role;
+  throw new Error("Invalid Convex realtime row");
+}
+
+function requireJobRepoStatus(value: unknown): JobRepoRecord["status"] {
+  const status = requireString(value);
+  if (status === "pending" || status === "prepared" || status === "skipped_empty" || status === "failed") {
+    return status;
+  }
+  throw new Error("Invalid Convex realtime row");
+}
+
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === "number" ? value : undefined;
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
