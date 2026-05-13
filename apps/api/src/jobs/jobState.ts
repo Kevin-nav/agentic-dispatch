@@ -251,6 +251,10 @@ export function buildWorkBranch(jobId: string, prompt: string): string {
   return `agentic-dispatch/${jobId}-${slugify(prompt)}`;
 }
 
+export function buildRepoWorkBranch(jobId: string, repoName: string): string {
+  return `agentic-dispatch/${jobId}-${slugify(repoName)}`;
+}
+
 export function normalizeOwner(owner: string): string {
   return owner.trim().toLowerCase();
 }

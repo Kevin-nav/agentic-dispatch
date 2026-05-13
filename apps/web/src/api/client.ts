@@ -73,6 +73,13 @@ export async function createJob(input: {
   baseBranch: string;
   prompt: string;
   mode: "async_pr" | "interactive";
+  repos?: Array<{
+    owner: string;
+    repo: string;
+    fullName?: string;
+    role: "editable" | "context";
+    baseBranch?: string;
+  }>;
 }): Promise<JobRecord> {
   const [repoOwner, repoName, extra] = input.repoFullName.split("/");
   if (!repoOwner || !repoName || extra) {
@@ -87,6 +94,7 @@ export async function createJob(input: {
       baseBranch: input.baseBranch,
       prompt: input.prompt,
       mode: input.mode === "interactive" ? "interactive_t3" : "async_pr",
+      repos: input.repos,
     }),
   });
 
