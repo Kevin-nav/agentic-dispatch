@@ -17,6 +17,30 @@ export const jobStatuses = [
 
 export type JobStatus = (typeof jobStatuses)[number];
 export type JobMode = "async_pr" | "interactive_t3";
+export type JobRepoRole = "editable" | "context";
+export type JobRepoStatus = "pending" | "prepared" | "skipped_empty" | "failed";
+
+export interface JobRepoRecord {
+  owner: string;
+  repo: string;
+  fullName: string;
+  role: JobRepoRole;
+  baseBranch: string;
+  workBranch?: string;
+  path?: string;
+  status: JobRepoStatus;
+  failureReason?: string;
+}
+
+export interface JobPullRequestRecord {
+  owner: string;
+  repo: string;
+  url: string;
+  number?: number;
+  headBranch?: string;
+  baseBranch?: string;
+  createdAt: string;
+}
 
 export interface JobRecord {
   id: string;
@@ -33,6 +57,8 @@ export interface JobRecord {
   t3EnvironmentId?: string;
   t3SessionUrl?: string;
   prUrl?: string;
+  repos?: JobRepoRecord[];
+  pullRequests?: JobPullRequestRecord[];
   createdAt: string;
   updatedAt: string;
 }

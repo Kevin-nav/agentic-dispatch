@@ -70,6 +70,122 @@ function makeDeps(store = makeStore(), t3Overrides: Partial<T3JobClient> = {}) {
 }
 
 describe("job orchestrator", () => {
+  it("normalizes legacy single-repo job requests", async () => {
+    const store = makeStore();
+
+    const job = await createJob(
+      {
+        repoOwner: " Kevin-nav ",
+        repoName: " demo ",
+        prompt: "Update README",
+        mode: "async_pr",
+      },
+      store,
+    );
+
+    expect(job.repoOwner).toBe("Kevin-nav");
+    expect(job.repoName).toBe("demo");
+    expect(job.baseBranch).toBe("main");
+    expect(job.repos).toEqual([
+      expect.objectContaining({
+        owner: "Kevin-nav",
+        repo: "demo",
+        fullName: "Kevin-nav/demo",
+        role: "editable",
+        baseBranch: "main",
+        status: "pending",
+      }),
+    ]);
+  });
+
+  it("normalizes multi-repo job requests", async () => {
+    const store = makeStore();
+
+    const job = await createJob(
+      {
+        prompt: "Inspect related services",
+        mode: "async_pr",
+        repos: [
+          {
+            owner: "Kevin-nav",
+            repo: "demo",
+            role: "editable",
+            baseBranch: "main",
+          },
+          {
+            owner: "Kevin-nav",
+            repo: "contracts",
+            fullName: "Kevin-nav/contracts",
+            role: "context",
+          },
+        ],
+      },
+      store,
+    );
+
+    expect(job.repoOwner).toBe("Kevin-nav");
+    expect(job.repoName).toBe("demo");
+    expect(job.workBranch).toContain("-demo");
+    expect(job.repos).toEqual([
+      expect.objectContaining({
+        fullName: "Kevin-nav/demo",
+        role: "editable",
+        baseBranch: "main",
+        workBranch: expect.stringContaining("-demo"),
+      }),
+      expect.objectContaining({
+        fullName: "Kevin-nav/contracts",
+        role: "context",
+        baseBranch: "main",
+        workBranch: undefined,
+      }),
+    ]);
+  });
+
+  it("rejects invalid multi-repo create requests", async () => {
+    const store = makeStore();
+
+    await expect(
+      createJob({ prompt: "No repos", mode: "async_pr", repos: [] }, store),
+    ).rejects.toThrow("At least one repository is required");
+
+    await expect(
+      createJob(
+        {
+          prompt: "Context only",
+          mode: "async_pr",
+          repos: [{ owner: "Kevin-nav", repo: "docs", role: "context" }],
+        },
+        store,
+      ),
+    ).rejects.toThrow("async_pr jobs require at least one editable repository");
+
+    await expect(
+      createJob(
+        {
+          prompt: "Bad role",
+          mode: "interactive_t3",
+          repos: [{ owner: "Kevin-nav", repo: "docs", role: "readonly" as never }],
+        },
+        store,
+      ),
+    ).rejects.toThrow("repos[0].role is invalid");
+
+    await expect(
+      createJob(
+        {
+          prompt: "Duplicate",
+          mode: "interactive_t3",
+          repos: [
+            { owner: "Kevin-nav", repo: "docs", role: "editable" },
+            { owner: "kevin-nav", repo: "DOCS", role: "context" },
+          ],
+        },
+        store,
+      ),
+    ).rejects.toThrow("Duplicate repository selected");
+  });
+
   it("runs a successful async PR flow and stores the PR URL", async () => {
     const store = makeStore();
     const job = await seedJob(store);

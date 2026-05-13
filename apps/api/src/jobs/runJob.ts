@@ -66,7 +66,11 @@ export async function runJob(
 
   try {
     throwIfAborted(signal);
-    await deps.store.updateJobStatus(jobId, "preparing_workspace", "Preparing workspace");
+    await deps.store.updateJobStatus(
+      jobId,
+      "preparing_workspace",
+      `Resolving GitHub installation for ${job.repoOwner}`,
+    );
     const installation = await deps.store.getInstallationByOwner(normalizeOwner(job.repoOwner));
     if (!installation) {
       throw new CategorizedJobError(
@@ -75,10 +79,25 @@ export async function runJob(
       );
     }
 
+    await deps.store.updateJobStatus(
+      jobId,
+      "preparing_workspace",
+      `Requesting GitHub installation token for ${job.repoOwner}`,
+    );
     const { token } = await deps.github.getInstallationToken(installation.installationId);
+    await deps.store.updateJobStatus(
+      jobId,
+      "preparing_workspace",
+      `Preparing workspace for ${job.repoOwner}/${job.repoName} on ${job.baseBranch}`,
+    );
     const workspace = await prepareWorkspaceForJob(job, jobId, token, deps);
 
     throwIfAborted(signal);
+    await deps.store.updateJobStatus(
+      jobId,
+      "preparing_workspace",
+      "Workspace ready; creating T3 project and thread",
+    );
     const { projectId, threadId, t3EnvironmentId, t3SessionUrl } = await registerJobInT3(
       job,
       jobId,
@@ -87,7 +106,11 @@ export async function runJob(
     );
     deps.activeJobs?.setT3Thread(jobId, threadId);
     await deps.store.attachT3Thread(jobId, projectId, threadId, t3EnvironmentId, t3SessionUrl);
-    await deps.store.updateJobStatus(jobId, "registered_in_t3", "Registered job in T3");
+    await deps.store.updateJobStatus(
+      jobId,
+      "registered_in_t3",
+      t3SessionUrl ? "T3 session ready to open" : "T3 thread registered; session URL unavailable",
+    );
 
     if (job.mode === "interactive_t3") {
       await deps.store.updateJobStatus(jobId, "completed", "Interactive T3 session ready");
@@ -101,8 +124,17 @@ export async function runJob(
       workBranch: job.workBranch,
       userPrompt: job.prompt,
     });
+    await deps.store.updateJobStatus(
+      jobId,
+      "registered_in_t3",
+      "Starting autonomous T3 turn",
+    );
     await startT3Turn(job, jobId, threadId, prompt, deps);
-    await deps.store.updateJobStatus(jobId, "running_in_t3", "T3 job is running");
+    await deps.store.updateJobStatus(
+      jobId,
+      "running_in_t3",
+      "T3 is running; waiting for completion and PR result",
+    );
 
     const result = await waitForT3Completion(threadId, deps, {
       pollIntervalMs: options.pollIntervalMs ?? defaultPollIntervalMs,
@@ -114,7 +146,11 @@ export async function runJob(
       await deps.store.attachPullRequest(jobId, result.prUrl);
     }
 
-    await deps.store.updateJobStatus(jobId, "completed", "Job completed");
+    await deps.store.updateJobStatus(
+      jobId,
+      "completed",
+      result.prUrl ? "Job completed with pull request" : "Job completed without a pull request",
+    );
     return requireJob(deps.store, jobId);
   } catch (error) {
     await handleRunFailure(jobId, deps, signal, error);

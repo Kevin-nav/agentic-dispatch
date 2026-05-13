@@ -234,6 +234,8 @@ function writeJson(response: ServerResponse, status: number, body: unknown): voi
 function statusForError(error: unknown): number {
   if (error instanceof SyntaxError) return 400;
   if (error instanceof Error && /not found/i.test(error.message)) return 404;
-  if (error instanceof Error && /required|unsupported/i.test(error.message)) return 400;
+  if (error instanceof Error && /required|unsupported|invalid|duplicate|at least/i.test(error.message)) {
+    return 400;
+  }
   return 500;
 }

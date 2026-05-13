@@ -1,5 +1,7 @@
 import {
   type JobEventRecord,
+  type JobPullRequestRecord,
+  type JobRepoRecord,
   type JobMode,
   type JobRecord,
   type JobStatus,
@@ -31,6 +33,7 @@ export interface CreateStoredJobInput {
   workBranch: string;
   prompt: string;
   mode: JobMode;
+  repos?: JobRepoRecord[];
 }
 
 export interface JobStore {
@@ -47,6 +50,7 @@ export interface JobStore {
     t3SessionUrl?: string,
   ): Promise<void>;
   attachPullRequest(jobId: string, prUrl: string): Promise<void>;
+  attachPullRequests(jobId: string, pullRequests: JobPullRequestRecord[]): Promise<void>;
   markJobFailed(
     jobId: string,
     failureReason: string,
@@ -158,7 +162,25 @@ export class InMemoryJobStore implements JobStore {
   async attachPullRequest(jobId: string, prUrl: string): Promise<void> {
     this.requireJob(jobId);
     this.patchJob(jobId, { prUrl });
-    this.appendEvent(jobId, "pull_request_attached", "Pull request attached", { prUrl });
+    this.appendEvent(jobId, "pull_request_attached", "Pull request URL captured", { prUrl });
+  }
+
+  async attachPullRequests(
+    jobId: string,
+    pullRequests: JobPullRequestRecord[],
+  ): Promise<void> {
+    this.requireJob(jobId);
+    if (pullRequests.length === 0) {
+      throw new Error("attachPullRequests requires at least one pull request");
+    }
+    const firstPullRequest = pullRequests[0];
+    if (!firstPullRequest) {
+      throw new Error("attachPullRequests requires at least one pull request");
+    }
+    this.patchJob(jobId, { pullRequests, prUrl: firstPullRequest.url });
+    this.appendEvent(jobId, "pull_requests_attached", "Pull requests attached", {
+      pullRequests,
+    });
   }
 
   async markJobFailed(
@@ -234,6 +256,10 @@ export class InMemoryJobStore implements JobStore {
 
 export function buildWorkBranch(jobId: string, prompt: string): string {
   return `agentic-dispatch/${jobId}-${slugify(prompt)}`;
+}
+
+export function buildRepoWorkBranch(jobId: string, repoName: string): string {
+  return `agentic-dispatch/${jobId}-${slugify(repoName)}`;
 }
 
 export function normalizeOwner(owner: string): string {

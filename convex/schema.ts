@@ -13,6 +13,33 @@ export const jobStatusValidator = v.union(
   v.literal("timed_out"),
 );
 
+export const jobRepoValidator = v.object({
+  owner: v.string(),
+  repo: v.string(),
+  fullName: v.string(),
+  role: v.union(v.literal("editable"), v.literal("context")),
+  baseBranch: v.string(),
+  workBranch: v.optional(v.string()),
+  path: v.optional(v.string()),
+  status: v.union(
+    v.literal("pending"),
+    v.literal("prepared"),
+    v.literal("skipped_empty"),
+    v.literal("failed"),
+  ),
+  failureReason: v.optional(v.string()),
+});
+
+export const jobPullRequestValidator = v.object({
+  owner: v.string(),
+  repo: v.string(),
+  url: v.string(),
+  number: v.optional(v.number()),
+  headBranch: v.optional(v.string()),
+  baseBranch: v.optional(v.string()),
+  createdAt: v.string(),
+});
+
 export default defineSchema({
   jobs: defineTable({
     repoOwner: v.string(),
@@ -28,6 +55,8 @@ export default defineSchema({
     t3EnvironmentId: v.optional(v.string()),
     t3SessionUrl: v.optional(v.string()),
     prUrl: v.optional(v.string()),
+    repos: v.optional(v.array(jobRepoValidator)),
+    pullRequests: v.optional(v.array(jobPullRequestValidator)),
     createdAt: v.string(),
     updatedAt: v.string(),
   })
