@@ -55,4 +55,49 @@ describe("job records", () => {
 
     expect(job.prUrl).toContain("/pull/1");
   });
+
+  it("models multi-repo manifests and pull request records", () => {
+    const job: JobRecord = {
+      id: "job_1",
+      repoOwner: "ZenoTradingTechnologies",
+      repoName: "ztt-execution-service",
+      baseBranch: "main",
+      workBranch: "agentic-dispatch/job_1",
+      prompt: "Inspect related services",
+      mode: "async_pr",
+      status: "completed",
+      repos: [
+        {
+          owner: "ZenoTradingTechnologies",
+          repo: "ztt-execution-service",
+          fullName: "ZenoTradingTechnologies/ztt-execution-service",
+          role: "editable",
+          baseBranch: "main",
+          workBranch: "agentic-dispatch/job_1-ztt-execution-service",
+          status: "prepared",
+        },
+        {
+          owner: "ZenoTradingTechnologies",
+          repo: "ztt-convex-contract",
+          fullName: "ZenoTradingTechnologies/ztt-convex-contract",
+          role: "context",
+          baseBranch: "main",
+          status: "prepared",
+        },
+      ],
+      pullRequests: [
+        {
+          owner: "ZenoTradingTechnologies",
+          repo: "ztt-execution-service",
+          url: "https://github.com/ZenoTradingTechnologies/ztt-execution-service/pull/12",
+          createdAt: "2026-05-12T00:00:00.000Z",
+        },
+      ],
+      createdAt: "2026-05-12T00:00:00.000Z",
+      updatedAt: "2026-05-12T00:00:00.000Z",
+    };
+
+    expect(job.repos?.map((repo) => repo.role)).toEqual(["editable", "context"]);
+    expect(job.pullRequests?.[0]?.repo).toBe("ztt-execution-service");
+  });
 });
