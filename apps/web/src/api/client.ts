@@ -114,9 +114,9 @@ export async function fetchInstallations(): Promise<GitHubInstallation[]> {
   return installations;
 }
 
-export async function fetchRepos(): Promise<string[]> {
+export async function fetchRepos(): Promise<InstallationRepo[]> {
   const { repos } = await apiRequest<{ repos: InstallationRepo[] }>("/api/github/repos");
-  return repos.map((repo) => repo.fullName);
+  return repos;
 }
 
 export async function syncInstallations(): Promise<void> {
