@@ -1,5 +1,7 @@
 import {
   type JobEventRecord,
+  type JobPullRequestRecord,
+  type JobRepoRecord,
   type JobMode,
   type JobRecord,
   type JobStatus,
@@ -31,6 +33,7 @@ export interface CreateStoredJobInput {
   workBranch: string;
   prompt: string;
   mode: JobMode;
+  repos?: JobRepoRecord[];
 }
 
 export interface JobStore {
@@ -47,6 +50,7 @@ export interface JobStore {
     t3SessionUrl?: string,
   ): Promise<void>;
   attachPullRequest(jobId: string, prUrl: string): Promise<void>;
+  attachPullRequests(jobId: string, pullRequests: JobPullRequestRecord[]): Promise<void>;
   markJobFailed(
     jobId: string,
     failureReason: string,
@@ -159,6 +163,17 @@ export class InMemoryJobStore implements JobStore {
     this.requireJob(jobId);
     this.patchJob(jobId, { prUrl });
     this.appendEvent(jobId, "pull_request_attached", "Pull request attached", { prUrl });
+  }
+
+  async attachPullRequests(
+    jobId: string,
+    pullRequests: JobPullRequestRecord[],
+  ): Promise<void> {
+    this.requireJob(jobId);
+    this.patchJob(jobId, { pullRequests, prUrl: pullRequests[0]?.url });
+    this.appendEvent(jobId, "pull_requests_attached", "Pull requests attached", {
+      pullRequests,
+    });
   }
 
   async markJobFailed(

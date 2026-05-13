@@ -1,6 +1,12 @@
 import { ConvexHttpClient } from "convex/browser";
 
-import type { JobEventRecord, JobRecord, JobStatus } from "@agentic-dispatch/shared";
+import type {
+  JobEventRecord,
+  JobPullRequestRecord,
+  JobRecord,
+  JobRepoRecord,
+  JobStatus,
+} from "@agentic-dispatch/shared";
 
 import type {
   CreateStoredJobInput,
@@ -26,6 +32,7 @@ export class ConvexJobStore implements JobStore {
       workBranch: input.workBranch,
       prompt: input.prompt,
       mode: input.mode,
+      repos: input.repos,
     });
 
     const job = await this.getJob(jobId);
@@ -72,6 +79,13 @@ export class ConvexJobStore implements JobStore {
     await this.mutation("jobs:attachPullRequest", { jobId, prUrl });
   }
 
+  async attachPullRequests(
+    jobId: string,
+    pullRequests: JobPullRequestRecord[],
+  ): Promise<void> {
+    await this.mutation("jobs:attachPullRequests", { jobId, pullRequests });
+  }
+
   async markJobFailed(
     jobId: string,
     failureReason: string,
@@ -114,7 +128,7 @@ export class ConvexJobStore implements JobStore {
 }
 
 function mapJob(row: ConvexRecord): JobRecord {
-  return {
+  const job: JobRecord = {
     id: requireString(row._id, "job._id"),
     repoOwner: requireString(row.repoOwner, "job.repoOwner"),
     repoName: requireString(row.repoName, "job.repoName"),
@@ -129,9 +143,61 @@ function mapJob(row: ConvexRecord): JobRecord {
     t3EnvironmentId: optionalString(row.t3EnvironmentId),
     t3SessionUrl: optionalString(row.t3SessionUrl),
     prUrl: optionalString(row.prUrl),
+    repos: mapJobRepos(row.repos),
+    pullRequests: mapPullRequests(row.pullRequests),
     createdAt: requireString(row.createdAt, "job.createdAt"),
     updatedAt: requireString(row.updatedAt, "job.updatedAt"),
   };
+
+  job.repos ??= [
+    {
+      owner: job.repoOwner,
+      repo: job.repoName,
+      fullName: `${job.repoOwner}/${job.repoName}`,
+      role: "editable",
+      baseBranch: job.baseBranch,
+      workBranch: job.workBranch,
+      status: "prepared",
+    },
+  ];
+
+  return job;
+}
+
+function mapJobRepos(value: unknown): JobRepoRecord[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.map((repo, index) => {
+    if (!isRecord(repo)) throw new Error(`Invalid Convex row: job.repos[${index}] is invalid`);
+    return {
+      owner: requireString(repo.owner, `job.repos[${index}].owner`),
+      repo: requireString(repo.repo, `job.repos[${index}].repo`),
+      fullName: requireString(repo.fullName, `job.repos[${index}].fullName`),
+      role: requireString(repo.role, `job.repos[${index}].role`) as JobRepoRecord["role"],
+      baseBranch: requireString(repo.baseBranch, `job.repos[${index}].baseBranch`),
+      workBranch: optionalString(repo.workBranch),
+      path: optionalString(repo.path),
+      status: requireString(repo.status, `job.repos[${index}].status`) as JobRepoRecord["status"],
+      failureReason: optionalString(repo.failureReason),
+    };
+  });
+}
+
+function mapPullRequests(value: unknown): JobPullRequestRecord[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.map((pullRequest, index) => {
+    if (!isRecord(pullRequest)) {
+      throw new Error(`Invalid Convex row: job.pullRequests[${index}] is invalid`);
+    }
+    return {
+      owner: requireString(pullRequest.owner, `job.pullRequests[${index}].owner`),
+      repo: requireString(pullRequest.repo, `job.pullRequests[${index}].repo`),
+      url: requireString(pullRequest.url, `job.pullRequests[${index}].url`),
+      number: optionalNumber(pullRequest.number),
+      headBranch: optionalString(pullRequest.headBranch),
+      baseBranch: optionalString(pullRequest.baseBranch),
+      createdAt: requireString(pullRequest.createdAt, `job.pullRequests[${index}].createdAt`),
+    };
+  });
 }
 
 function mapJobEvent(row: ConvexRecord): JobEventRecord {
@@ -168,6 +234,10 @@ function optionalString(value: unknown): string | undefined {
 function requireNumber(value: unknown, label: string): number {
   if (typeof value !== "number") throw new Error(`Invalid Convex row: ${label} is missing`);
   return value;
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === "number" ? value : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

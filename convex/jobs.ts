@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
-import { jobStatusValidator } from "./schema";
+import { jobPullRequestValidator, jobRepoValidator, jobStatusValidator } from "./schema";
 
 type JobStatus =
   | "queued"
@@ -75,11 +75,26 @@ export const createJob = mutation({
     workBranch: v.string(),
     prompt: v.string(),
     mode: v.union(v.literal("async_pr"), v.literal("interactive_t3")),
+    repos: v.optional(v.array(jobRepoValidator)),
   },
   handler: async (ctx, args) => {
     const timestamp = nowIso();
+    const repos =
+      args.repos ??
+      [
+        {
+          owner: args.repoOwner,
+          repo: args.repoName,
+          fullName: `${args.repoOwner}/${args.repoName}`,
+          role: "editable" as const,
+          baseBranch: args.baseBranch,
+          workBranch: args.workBranch,
+          status: "pending" as const,
+        },
+      ];
     const jobId = await ctx.db.insert("jobs", {
       ...args,
+      repos,
       status: "queued",
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -145,6 +160,24 @@ export const attachPullRequest = mutation({
     const timestamp = nowIso();
     await ctx.db.patch(jobId, { prUrl, updatedAt: timestamp });
     await appendJobEvent(ctx, jobId, "pull_request_attached", "Pull request attached", { prUrl });
+  },
+});
+
+export const attachPullRequests = mutation({
+  args: {
+    jobId: v.id("jobs"),
+    pullRequests: v.array(jobPullRequestValidator),
+  },
+  handler: async (ctx, { jobId, pullRequests }) => {
+    const timestamp = nowIso();
+    await ctx.db.patch(jobId, {
+      pullRequests,
+      prUrl: pullRequests[0]?.url,
+      updatedAt: timestamp,
+    });
+    await appendJobEvent(ctx, jobId, "pull_requests_attached", "Pull requests attached", {
+      pullRequests,
+    });
   },
 });
 
