@@ -162,7 +162,7 @@ export class InMemoryJobStore implements JobStore {
   async attachPullRequest(jobId: string, prUrl: string): Promise<void> {
     this.requireJob(jobId);
     this.patchJob(jobId, { prUrl });
-    this.appendEvent(jobId, "pull_request_attached", "Pull request attached", { prUrl });
+    this.appendEvent(jobId, "pull_request_attached", "Pull request URL captured", { prUrl });
   }
 
   async attachPullRequests(

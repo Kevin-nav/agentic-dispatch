@@ -159,7 +159,9 @@ export const attachPullRequest = mutation({
   handler: async (ctx, { jobId, prUrl }) => {
     const timestamp = nowIso();
     await ctx.db.patch(jobId, { prUrl, updatedAt: timestamp });
-    await appendJobEvent(ctx, jobId, "pull_request_attached", "Pull request attached", { prUrl });
+    await appendJobEvent(ctx, jobId, "pull_request_attached", "Pull request URL captured", {
+      prUrl,
+    });
   },
 });
 

@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { fetchJob, fetchJobEvents, cancelJob } from "../api/client.js";
-import type { JobRecord, JobEventRecord } from "../api/types.js";
-import { StatusBadge } from "../components/StatusBadge.js";
+import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+
+import { cancelJob } from "../api/client.js";
+import { useJobData, useJobEventsData, useT3SessionUrl } from "../api/realtime.js";
+import type { JobEventRecord, JobRecord } from "../api/types.js";
 import { Icon } from "../components/Icon.js";
+import { StatusBadge } from "../components/StatusBadge.js";
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -24,41 +26,58 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-const TERMINAL_STATUSES = ["completed", "failed", "cancelled", "timed_out"];
+const terminalStatuses = ["completed", "failed", "cancelled", "timed_out"];
+
+function currentStep(job: JobRecord, events: JobEventRecord[]): string {
+  const latest = events.at(-1);
+  if (job.failureReason) return job.failureReason;
+  if (latest?.message) return latest.message;
+  if (job.status === "queued") return "Waiting for dispatcher";
+  if (job.status === "preparing_workspace") return "Preparing workspace";
+  if (job.status === "registered_in_t3") return "T3 session ready";
+  if (job.status === "running_in_t3") return "T3 is running";
+  if (job.status === "completed") return "Job completed";
+  return job.status.replaceAll("_", " ");
+}
+
+function metadataEntries(metadata: Record<string, unknown> | undefined) {
+  if (!metadata) return [];
+  return Object.entries(metadata).filter(([, value]) => {
+    if (value === undefined || value === null) return false;
+    return typeof value !== "object";
+  });
+}
 
 export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
-  const [job, setJob] = useState<JobRecord | null>(null);
-  const [events, setEvents] = useState<JobEventRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: job, loading: jobLoading, mode } = useJobData(jobId);
+  const { data: events, loading: eventsLoading } = useJobEventsData(jobId);
+  const t3SessionUrl = useT3SessionUrl(job);
   const [cancelling, setCancelling] = useState(false);
 
-  useEffect(() => {
-    if (!jobId) return;
-    Promise.all([fetchJob(jobId), fetchJobEvents(jobId)])
-      .then(([j, e]) => {
-        setJob(j);
-        setEvents(e);
-      })
-      .finally(() => setLoading(false));
-  }, [jobId]);
+  const prLinks = useMemo(
+    () => job?.pullRequests?.map((pullRequest) => pullRequest.url) ?? (job?.prUrl ? [job.prUrl] : []),
+    [job],
+  );
 
   async function handleCancel() {
     if (!job || cancelling) return;
     setCancelling(true);
-    await cancelJob(job.id);
-    setJob((prev) => prev ? { ...prev, status: "cancelled", updatedAt: new Date().toISOString() } : null);
-    setCancelling(false);
+    try {
+      await cancelJob(job.id);
+    } finally {
+      setCancelling(false);
+    }
   }
 
-  if (loading) {
+  if (jobLoading || eventsLoading) {
     return (
       <div className="empty-state">
         <div className="empty-state-icon">
           <span className="spinner"><Icon name="loading" size={32} /></span>
         </div>
-        <div className="empty-state-title">Loading…</div>
+        <div className="empty-state-title">Loading...</div>
       </div>
     );
   }
@@ -77,7 +96,7 @@ export function JobDetailPage() {
     );
   }
 
-  const isTerminal = TERMINAL_STATUSES.includes(job.status);
+  const isTerminal = terminalStatuses.includes(job.status);
 
   return (
     <div>
@@ -85,7 +104,15 @@ export function JobDetailPage() {
         <Icon name="arrow-left" size={14} /> Back
       </button>
 
-      {/* Header */}
+      <div className="page-header page-header--compact">
+        <p className="page-subtitle">
+          <span className={`live-indicator live-indicator--${mode}`}>
+            <span className="live-indicator-dot" />
+            {mode === "realtime" ? "Live via Convex" : "HTTP fallback"}
+          </span>
+        </p>
+      </div>
+
       <div className="card stagger-item" style={{ animationDelay: "0ms", marginBottom: "var(--space-md)" }}>
         <div className="job-card-header" style={{ marginBottom: "var(--space-sm)" }}>
           <div className="job-card-repo">
@@ -95,6 +122,23 @@ export function JobDetailPage() {
             {job.repoOwner}/{job.repoName}
           </div>
           <StatusBadge status={job.status} />
+        </div>
+
+        <div className="job-state-callout">
+          <div>
+            <div className="job-state-callout-label">Current step</div>
+            <div className="job-state-callout-value">{currentStep(job, events)}</div>
+          </div>
+          {t3SessionUrl && (
+            <a
+              href={t3SessionUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary"
+            >
+              <Icon name="external-link" size={14} /> Open in T3
+            </a>
+          )}
         </div>
 
         <div className="detail-row">
@@ -119,15 +163,14 @@ export function JobDetailPage() {
           <span className="detail-label">Created</span>
           <span className="detail-value">{timeAgo(job.createdAt)}</span>
         </div>
-        {job.t3SessionUrl && (
+        {t3SessionUrl && (
           <div className="detail-row">
             <span className="detail-label">T3 Session</span>
             <a
-              href={job.t3SessionUrl}
+              href={t3SessionUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="detail-value"
-              style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}
+              className="detail-value detail-link"
             >
               <Icon name="external-link" size={12} /> Open in T3
             </a>
@@ -136,25 +179,26 @@ export function JobDetailPage() {
         {job.t3ThreadId && (
           <div className="detail-row">
             <span className="detail-label">T3 Thread</span>
-            <span className="detail-value" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
+            <span className="detail-value detail-link">
               <Icon name="thread" size={12} /> {job.t3ThreadId}
             </span>
           </div>
         )}
-        {job.prUrl && (
-          <div className="detail-row">
-            <span className="detail-label">Pull Request</span>
+        {prLinks.map((url, index) => (
+          <div className="detail-row" key={url}>
+            <span className="detail-label">
+              Pull Request{prLinks.length > 1 ? ` ${index + 1}` : ""}
+            </span>
             <a
-              href={job.prUrl}
+              href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="detail-value"
-              style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}
+              className="detail-value detail-link"
             >
               <Icon name="external-link" size={12} /> View PR
             </a>
           </div>
-        )}
+        ))}
         {job.failureReason && (
           <div className="detail-row">
             <span className="detail-label">Error</span>
@@ -165,29 +209,46 @@ export function JobDetailPage() {
         )}
       </div>
 
-      {/* Prompt */}
       <div className="detail-section stagger-item" style={{ animationDelay: "80ms" }}>
         <div className="detail-section-title">Task Prompt</div>
         <div className="prompt-display">{job.prompt}</div>
       </div>
 
-      {/* Timeline */}
       {events.length > 0 && (
         <div className="detail-section stagger-item" style={{ animationDelay: "160ms" }}>
           <div className="detail-section-title">Event Timeline</div>
           <div className="timeline">
-            {events.map((evt, i) => {
-              const isLast = i === events.length - 1;
+            {events.map((event, index) => {
+              const isLast = index === events.length - 1;
               let dotClass = "timeline-dot";
               if (isLast && !isTerminal) dotClass += " timeline-dot--active";
-              else if (evt.type === "pr_created" || evt.type === "status_change" && evt.message.includes("completed")) dotClass += " timeline-dot--completed";
-              else if (evt.type === "error") dotClass += " timeline-dot--failed";
+              else if (
+                event.type.includes("pull_request") ||
+                event.message.toLowerCase().includes("completed")
+              ) {
+                dotClass += " timeline-dot--completed";
+              } else if (
+                event.type.includes("failed") ||
+                event.message.toLowerCase().includes("failed")
+              ) {
+                dotClass += " timeline-dot--failed";
+              }
+              const meta = metadataEntries(event.metadata);
 
               return (
-                <div key={evt.id} className="timeline-item">
+                <div key={event.id} className="timeline-item">
                   <div className={dotClass} />
-                  <div className="timeline-message">{evt.message}</div>
-                  <div className="timeline-time">{formatTime(evt.createdAt)}</div>
+                  <div className="timeline-message">{event.message}</div>
+                  {meta.length > 0 && (
+                    <div className="timeline-meta">
+                      {meta.map(([key, value]) => (
+                        <span key={key} className="timeline-meta-item">
+                          {key}: {String(value)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="timeline-time">{formatTime(event.createdAt)}</div>
                 </div>
               );
             })}
@@ -195,7 +256,6 @@ export function JobDetailPage() {
         </div>
       )}
 
-      {/* Actions */}
       {!isTerminal && (
         <div className="stagger-item" style={{ animationDelay: "240ms" }}>
           <button
@@ -207,7 +267,7 @@ export function JobDetailPage() {
             {cancelling ? (
               <>
                 <span className="spinner"><Icon name="loading" size={14} /></span>
-                Cancelling…
+                Cancelling...
               </>
             ) : (
               <>

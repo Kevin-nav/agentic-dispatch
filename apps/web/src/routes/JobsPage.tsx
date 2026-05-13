@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchJobs } from "../api/client.js";
+
+import { buildT3SessionUrl, useJobsData } from "../api/realtime.js";
 import type { JobRecord } from "../api/types.js";
-import { StatusBadge } from "../components/StatusBadge.js";
 import { Icon } from "../components/Icon.js";
+import { StatusBadge } from "../components/StatusBadge.js";
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -12,8 +12,22 @@ function timeAgo(iso: string): string {
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function currentStep(job: JobRecord): string {
+  if (job.failureReason) return job.failureReason;
+  if (job.status === "queued") return "Waiting for the dispatcher to start";
+  if (job.status === "preparing_workspace") return "Preparing repository workspace";
+  if (job.status === "registered_in_t3") return "T3 session is ready";
+  if (job.status === "running_in_t3") return "T3 is working on the task";
+  if (job.status === "blocked") return "Needs attention before it can continue";
+  if (job.status === "completed") {
+    return job.prUrl || job.pullRequests?.length ? "Completed with PR output" : "Completed";
+  }
+  if (job.status === "timed_out") return "Timed out while waiting for T3";
+  if (job.status === "cancelled") return "Cancelled";
+  return "Failed";
 }
 
 function JobCardSkeleton() {
@@ -33,30 +47,28 @@ function JobCardSkeleton() {
 }
 
 export function JobsPage() {
-  const [jobs, setJobs] = useState<JobRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: jobs, loading, mode } = useJobsData();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchJobs()
-      .then(setJobs)
-      .finally(() => setLoading(false));
-  }, []);
-
   const activeCount = jobs.filter(
-    (j) => !["completed", "failed", "cancelled", "timed_out"].includes(j.status),
+    (job) => !["completed", "failed", "cancelled", "timed_out"].includes(job.status),
   ).length;
-  const completedCount = jobs.filter((j) => j.status === "completed").length;
-  const failedCount = jobs.filter((j) => j.status === "failed").length;
+  const completedCount = jobs.filter((job) => job.status === "completed").length;
+  const failedCount = jobs.filter((job) => job.status === "failed").length;
 
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title" id="page-title-jobs">Jobs</h1>
-        <p className="page-subtitle">Autonomous task dispatch overview</p>
+        <p className="page-subtitle">
+          Autonomous task dispatch overview
+          <span className={`live-indicator live-indicator--${mode}`}>
+            <span className="live-indicator-dot" />
+            {mode === "realtime" ? "Live via Convex" : "HTTP fallback"}
+          </span>
+        </p>
       </div>
 
-      {/* Stats */}
       <div className="stats-summary">
         <div className="stat-item stagger-item" style={{ animationDelay: "0ms" }}>
           <div className="stat-item-value stat-item-value--active">{activeCount}</div>
@@ -94,52 +106,63 @@ export function JobsPage() {
         </div>
       ) : (
         <div>
-          {jobs.map((job, i) => (
-            <div
-              key={job.id}
-              className="card card-interactive job-card stagger-item"
-              style={{ animationDelay: `${200 + i * 60}ms` }}
-              onClick={() => navigate(`/jobs/${job.id}`)}
-              id={`job-card-${job.id}`}
-            >
-              <div className="job-card-header">
-                <div className="job-card-repo">
-                  <span className="job-card-repo-icon">
-                    <Icon name="repo" size={16} />
-                  </span>
-                  {job.repoOwner}/{job.repoName}
-                </div>
-                <StatusBadge status={job.status} />
-              </div>
-
-              <div className="job-card-prompt">{job.prompt}</div>
-
-              <div className="job-card-footer">
-                <span className="job-card-time">
-                  <Icon name="clock" size={12} />
-                  {timeAgo(job.createdAt)}
-                </span>
-                <div className="job-card-links">
-                  {job.prUrl && (
-                    <a
-                      href={job.prUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="job-card-link"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Icon name="pr" size={12} /> PR
-                    </a>
-                  )}
-                  {job.t3ThreadId && (
-                    <span className="job-card-link">
-                      <Icon name="thread" size={12} /> T3
+          {jobs.map((job, index) => {
+            const t3Url = buildT3SessionUrl(job);
+            const prUrl = job.pullRequests?.[0]?.url ?? job.prUrl;
+            return (
+              <div
+                key={job.id}
+                className="card card-interactive job-card stagger-item"
+                style={{ animationDelay: `${200 + index * 60}ms` }}
+                onClick={() => navigate(`/jobs/${job.id}`)}
+                id={`job-card-${job.id}`}
+              >
+                <div className="job-card-header">
+                  <div className="job-card-repo">
+                    <span className="job-card-repo-icon">
+                      <Icon name="repo" size={16} />
                     </span>
-                  )}
+                    {job.repoOwner}/{job.repoName}
+                  </div>
+                  <StatusBadge status={job.status} />
+                </div>
+
+                <div className="job-card-prompt">{job.prompt}</div>
+                <div className="job-card-step">{currentStep(job)}</div>
+
+                <div className="job-card-footer">
+                  <span className="job-card-time">
+                    <Icon name="clock" size={12} />
+                    {timeAgo(job.createdAt)}
+                  </span>
+                  <div className="job-card-links">
+                    {prUrl && (
+                      <a
+                        href={prUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="job-card-link"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <Icon name="pr" size={12} /> PR
+                      </a>
+                    )}
+                    {t3Url && (
+                      <a
+                        href={t3Url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="job-card-link"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <Icon name="external-link" size={12} /> T3
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
